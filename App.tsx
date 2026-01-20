@@ -15,7 +15,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import Profile from './pages/Profile';
 import History from './pages/History';
 import Sidebar from './components/Sidebar';
-import { Shield, Cloud, Lock, Loader2 } from 'lucide-react';
+import { Shield, Cloud, Lock, Loader2, RefreshCw } from 'lucide-react';
 
 const App: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -24,9 +24,11 @@ const App: React.FC = () => {
   const [auth, setAuth] = useState<AuthState>({ user: null, isAuthenticated: false });
   const [currentPage, setCurrentPage] = useState<string>('dashboard');
   const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState<string>(new Date().toLocaleTimeString());
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (manual = false) => {
+    if (manual) setIsSyncing(true);
     try {
       const [u, r, s] = await Promise.all([
         getStoredUsers(),
@@ -36,9 +38,11 @@ const App: React.FC = () => {
       setUsers(u);
       setRegistrations(r);
       setAppSettings(s);
+      setLastSync(new Date().toLocaleTimeString());
     } catch (err) {
       console.error("Failed to fetch data from Supabase:", err);
     } finally {
+      if (manual) setTimeout(() => setIsSyncing(false), 800);
       setLoading(false);
     }
   };
@@ -162,7 +166,7 @@ const App: React.FC = () => {
       
       <main className="flex-1 p-4 md:p-8 lg:ml-64 overflow-auto z-10">
         <div className="max-w-6xl mx-auto">
-          <header className="mb-8 flex justify-between items-center border-b border-slate-800 pb-4">
+          <header className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800 pb-4 gap-4">
             <div>
               <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 font-mono">
                 Vai Dar Banho ao Carro
@@ -171,14 +175,32 @@ const App: React.FC = () => {
                 Protocolo de Higienização Automóvel v2.5.0 - Cloud Connected
               </p>
             </div>
-            <div className="hidden md:flex items-center gap-4 text-xs font-mono">
-              <div className="flex items-center gap-1 text-emerald-400">
-                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
-                Supabase Sync
+            
+            <div className="flex items-center gap-3 self-end sm:self-auto">
+              <div className="flex flex-col items-end mr-2">
+                <div className="flex items-center gap-1 text-emerald-400 text-[10px] font-mono uppercase tracking-tighter">
+                  <div className={`w-2 h-2 rounded-full bg-emerald-400 ${isSyncing ? 'animate-ping' : ''}`}></div>
+                  {isSyncing ? 'Syncing...' : 'Synced'}
+                </div>
+                <div className="text-[9px] text-slate-600 font-mono">Last: {lastSync}</div>
               </div>
-              <div className="flex items-center gap-1 text-cyan-400">
-                <Lock size={12} />
-                Encrypted Session
+
+              <button
+                onClick={() => fetchData(true)}
+                disabled={isSyncing}
+                className={`p-2 rounded-xl border transition-all flex items-center gap-2 group ${
+                  isSyncing 
+                  ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400 cursor-wait' 
+                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-cyan-500/50 hover:text-cyan-400 hover:shadow-lg hover:shadow-cyan-500/10'
+                }`}
+                title="Sincronizar com Cloud"
+              >
+                <RefreshCw size={18} className={`${isSyncing ? 'animate-spin' : 'group-active:rotate-180 transition-transform duration-500'}`} />
+                <span className="text-xs font-bold font-mono hidden md:inline">SYNC CLOUD</span>
+              </button>
+
+              <div className="hidden md:flex items-center gap-2 text-cyan-400/50">
+                <Lock size={14} />
               </div>
             </div>
           </header>
