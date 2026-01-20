@@ -144,10 +144,8 @@ const App: React.FC = () => {
     setCurrentPage(page);
     setIsMobileMenuOpen(false);
     
-    // Sincronização automática ao selecionar 'Registos da Semana'
-    if (page === 'admin-weekly') {
-      fetchData(true);
-    }
+    // Sincronização automática em todas as trocas de página
+    fetchData(true);
   };
 
   if (loading || !settings) {
