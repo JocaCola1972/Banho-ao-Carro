@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Registration, AppSettings } from '../types';
 import { getWeekNumber } from '../utils';
+import * as XLSX from 'xlsx';
 import { 
   Users, 
   Settings, 
@@ -19,7 +20,9 @@ import {
   ShieldCheck,
   ClipboardList,
   Car as CarIcon,
-  MapPin
+  MapPin,
+  FileSpreadsheet,
+  FileText
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -82,9 +85,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     });
   };
 
-  const exportCurrentWeek = () => {
+  const prepareExportData = (data: Registration[]) => {
+    return data.map(r => ({
+      'Nome do Utilizador': r.userName,
+      'Veículo': r.carDetails,
+      'Data de Inscrição': new Date(r.date).toLocaleDateString('pt-PT'),
+      'Hora': new Date(r.date).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
+      'Semana': r.weekNumber,
+      'Mês': r.month,
+      'Ano': r.year,
+      'Lugar de Estacionamento': r.parkingSpot || 'N/A'
+    }));
+  };
+
+  const exportToExcel = (data: Registration[], fileName: string) => {
+    const ws = XLSX.utils.json_to_sheet(prepareExportData(data));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Registos");
+    XLSX.writeFile(wb, `${fileName}.xlsx`);
+  };
+
+  const exportToCSV = (data: Registration[], fileName: string) => {
     let csv = "\uFEFFNome,Carro,Data,Lugar\n";
-    weeklyRegistrations.forEach(r => {
+    data.forEach(r => {
       csv += `"${r.userName}","${r.carDetails}","${new Date(r.date).toLocaleDateString()}","${r.parkingSpot || ''}"\n`;
     });
 
@@ -93,7 +116,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const a = document.createElement('a');
     a.setAttribute('hidden', '');
     a.setAttribute('href', url);
-    a.setAttribute('download', `lavagens-semana-${currentWeek}.csv`);
+    a.setAttribute('download', `${fileName}.csv`);
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -162,7 +185,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     <div className="space-y-8">
       {/* Visual Header (Breadcrumb style) */}
       <div className="flex items-center gap-2 text-xs font-mono text-slate-500 uppercase tracking-widest mb-4">
-        {/* Added missing ShieldCheck import from lucide-react */}
         <ShieldCheck size={14} />
         <span>Administração</span>
         <span>/</span>
@@ -488,22 +510,70 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       {activeTab === 'export' && (
-        <div className="bg-slate-900 border border-slate-800 p-12 rounded-3xl text-center shadow-xl relative overflow-hidden animate-in fade-in slide-in-from-left-2">
-           <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_70%)] from-cyan-500"></div>
-          <div className="w-20 h-20 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-400 mx-auto mb-6 border border-cyan-500/20">
-            <Download size={40} className="animate-pulse" />
+        <div className="space-y-8 animate-in fade-in slide-in-from-left-2">
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Relatório Semanal */}
+            <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl text-center shadow-xl relative overflow-hidden group">
+              <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_70%)] from-cyan-500"></div>
+              <div className="w-16 h-16 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-400 mx-auto mb-6 border border-cyan-500/20 group-hover:scale-110 transition-transform">
+                <ClipboardList size={32} />
+              </div>
+              <h3 className="text-xl font-bold mb-2 font-mono">Relatório Semanal</h3>
+              <p className="text-slate-400 max-w-xs mx-auto mb-8 text-sm">
+                Registos da semana corrente (W{currentWeek}). Ideal para a equipa operacional.
+              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => exportToExcel(weeklyRegistrations, `lavagens-semana-${currentWeek}`)}
+                  className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-3 uppercase tracking-widest font-mono text-xs"
+                >
+                  <FileSpreadsheet size={18} />
+                  Exportar Excel (.XLSX)
+                </button>
+                <button
+                  onClick={() => exportToCSV(weeklyRegistrations, `lavagens-semana-${currentWeek}`)}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 px-6 rounded-xl border border-slate-700 transition-all flex items-center justify-center gap-3 uppercase tracking-widest font-mono text-xs"
+                >
+                  <FileText size={18} />
+                  Exportar CSV (.CSV)
+                </button>
+              </div>
+            </div>
+
+            {/* Histórico Completo */}
+            <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl text-center shadow-xl relative overflow-hidden group">
+              <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_70%)] from-emerald-500"></div>
+              <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 mx-auto mb-6 border border-emerald-500/20 group-hover:scale-110 transition-transform">
+                <RefreshCcw size={32} />
+              </div>
+              <h3 className="text-xl font-bold mb-2 font-mono">Histórico Global</h3>
+              <p className="text-slate-400 max-w-xs mx-auto mb-8 text-sm">
+                Todos os registos desde o início do serviço. Ideal para auditoria e métricas.
+              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => exportToExcel(registrations, `historico-lavagens-completo`)}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-3 uppercase tracking-widest font-mono text-xs"
+                >
+                  <FileSpreadsheet size={18} />
+                  Exportar Histórico (.XLSX)
+                </button>
+                <button
+                  onClick={() => exportToCSV(registrations, `historico-lavagens-completo`)}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 px-6 rounded-xl border border-slate-700 transition-all flex items-center justify-center gap-3 uppercase tracking-widest font-mono text-xs"
+                >
+                  <FileText size={18} />
+                  Exportar Histórico (.CSV)
+                </button>
+              </div>
+            </div>
           </div>
-          <h3 className="text-2xl font-bold mb-2 font-mono">Data Extraction Terminal</h3>
-          <p className="text-slate-400 max-w-sm mx-auto mb-8 text-sm">
-            Gerar relatório CSV descritivo com todos os registos ativos para a semana operacional em curso (W{currentWeek}).
-          </p>
-          <button
-            onClick={exportCurrentWeek}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 px-8 rounded-2xl shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-3 mx-auto uppercase tracking-widest font-mono text-sm"
-          >
-            <Download size={20} />
-            Executar Exportação (.CSV)
-          </button>
+
+          <div className="p-4 bg-slate-900/50 border border-dashed border-slate-800 rounded-2xl text-center">
+            <p className="text-[10px] text-slate-600 font-mono uppercase tracking-widest">
+              Terminal de Extração de Dados Ativo • Protocolo de Auditoria v2.1
+            </p>
+          </div>
         </div>
       )}
     </div>
