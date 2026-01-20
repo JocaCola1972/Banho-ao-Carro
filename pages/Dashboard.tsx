@@ -92,7 +92,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
           <CheckCircle2 size={48} className="text-emerald-400 mb-4 animate-bounce md:w-16 md:h-16" />
           <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Lavagem Agendada!</h2>
           <p className="text-slate-300 text-sm md:text-base max-w-md">
-            O seu lugar está garantido para esta semana. Por favor, siga as instruções abaixo:
+            O seu lugar está garantido para esta semana. No dia da lavagem, deve deixar a chave na receção e indicar onde o carro está estacionado.
           </p>
         </div>
 
@@ -125,7 +125,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
     return (
       <div className="bg-slate-900 border border-slate-800 p-8 md:p-12 rounded-3xl flex flex-col items-center text-center">
         <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 mb-6">
-          {/* Fix: Replace size and md:size with Tailwind classes for responsive sizing */}
           <Info className="w-8 h-8 md:w-10 md:h-10" />
         </div>
         <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Limite Mensal Atingido</h2>
@@ -144,7 +143,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
     return (
       <div className="bg-slate-900 border border-slate-800 p-8 md:p-12 rounded-3xl flex flex-col items-center text-center">
         <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-red-500/10 flex items-center justify-center text-red-400 mb-6">
-          {/* Fix: Replace size and md:size with Tailwind classes for responsive sizing */}
           <AlertCircle className="w-8 h-8 md:w-10 md:h-10" />
         </div>
         <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Inscrições Esgotadas</h2>
@@ -163,15 +161,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
     return (
       <div className="bg-slate-900 border border-slate-800 p-8 md:p-12 rounded-3xl flex flex-col items-center text-center">
         <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 mb-6">
-          {/* Fix: Replace size and md:size with Tailwind classes for responsive sizing */}
           <Timer className="w-8 h-8 md:w-10 md:h-10" />
         </div>
-        <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Inscrições Brevemente</h2>
+        <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Inscrições Fechadas</h2>
         <p className="text-slate-400 text-sm md:text-base max-w-sm mb-6">
-          As inscrições abrem todas as quintas-feiras às 08:00 da manhã. Volte em breve para garantir o seu lugar.
+          As inscrições para a semana corrente ainda não foram abertas pela administração. Por favor, tente mais tarde.
         </p>
         <div className="bg-slate-800/50 px-4 py-2 rounded-lg text-slate-500 text-[10px] md:text-xs font-mono">
-          STATUS_CODE: AWAITING_WINDOW_OPEN
+          STATUS_CODE: AWAITING_ADMIN_ACTION
         </div>
       </div>
     );
@@ -278,12 +275,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
                 O cancelamento tardio pode resultar em suspensão da quota.
               </li>
             </ul>
-          </div>
-          
-          {/* Status Indicator for Mobile/Tablet */}
-          <div className="bg-slate-900/30 border border-slate-800/50 rounded-2xl p-4 flex items-center justify-between text-[10px] font-mono text-slate-600">
-            <span>NETWORK: SECURE_WASH_VLAN</span>
-            <span>PING: 12ms</span>
           </div>
         </div>
       </div>

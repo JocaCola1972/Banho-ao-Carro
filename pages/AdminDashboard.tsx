@@ -83,6 +83,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       manualOpenWeek: currentWeek,
       manualOpenYear: currentYear
     });
+    alert('As inscrições para a semana corrente foram abertas com sucesso!');
   };
 
   const prepareExportData = (data: Registration[]) => {
@@ -181,6 +182,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  const isCurrentWeekOpen = settings.manualOpenWeek === currentWeek && settings.manualOpenYear === currentYear;
+
   return (
     <div className="space-y-8">
       {/* Visual Header (Breadcrumb style) */}
@@ -203,8 +206,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <ClipboardList size={20} className="text-slate-500" />
               Inscrições da Semana Corrente (W{currentWeek})
             </h3>
-            <div className="text-xs font-mono text-cyan-500 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/20">
-              {weeklyRegistrations.length} / {settings.weeklyCapacity} LUGARES OCUPADOS
+            <div className="flex items-center gap-4">
+              <div className={`text-[10px] font-mono px-3 py-1 rounded-full border ${isCurrentWeekOpen ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                {isCurrentWeekOpen ? 'INSCRIÇÕES ABERTAS' : 'INSCRIÇÕES FECHADAS'}
+              </div>
+              <div className="text-xs font-mono text-cyan-500 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/20">
+                {weeklyRegistrations.length} / {settings.weeklyCapacity} LUGARES OCUPADOS
+              </div>
             </div>
           </div>
 
@@ -465,15 +473,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="pt-4 border-t border-slate-800">
                 <h4 className="font-bold mb-2 flex items-center gap-2">
                    <ShieldAlert size={16} className="text-amber-500" />
-                   Controlo Manual de Janela
+                   Controlo de Janela de Inscrição
                 </h4>
-                <p className="text-xs text-slate-500 mb-4">Override: Forçar abertura das inscrições antes do horário automático (Quinta às 08:00).</p>
+                <p className="text-xs text-slate-500 mb-4">
+                  Manual Ops: As inscrições são abertas exclusivamente por ação direta da administração.
+                </p>
                 <button
                   onClick={handleManualOpen}
-                  className="w-full bg-slate-800 hover:bg-slate-700 text-cyan-400 py-3 rounded-xl border border-cyan-500/30 flex items-center justify-center gap-2 font-bold transition-all group"
+                  disabled={isCurrentWeekOpen}
+                  className={`w-full py-3 rounded-xl border flex items-center justify-center gap-2 font-bold transition-all group ${
+                    isCurrentWeekOpen 
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 cursor-default' 
+                    : 'bg-slate-800 hover:bg-slate-700 text-cyan-400 border-cyan-500/30 active:scale-95'
+                  }`}
                 >
-                  <Play size={18} className="group-hover:translate-x-1 transition-transform" />
-                  ATIVAR ABERTURA ANTECIPADA
+                  <Play size={18} className={isCurrentWeekOpen ? '' : 'group-hover:translate-x-1 transition-transform'} />
+                  {isCurrentWeekOpen ? 'INSCRIÇÕES ABERTAS (W' + currentWeek + ')' : 'ABRIR INSCRIÇÕES DA SEMANA'}
                 </button>
               </div>
             </div>

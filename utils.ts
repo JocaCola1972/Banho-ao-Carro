@@ -14,25 +14,20 @@ export const areRegistrationsOpen = (settings: AppSettings): boolean => {
   const currentWeek = getWeekNumber(now);
   const currentYear = now.getFullYear();
 
-  // Check manual override
+  // Abertura apenas por controlo manual do administrador
   if (settings.manualOpenWeek === currentWeek && settings.manualOpenYear === currentYear) {
     return true;
   }
 
-  // Automatic: Thursdays at 08:00
-  const day = now.getDay(); // 0 (Sun) to 6 (Sat)
-  const hour = now.getHours();
-
-  // If it's Thursday (4), and hour >= 8
-  if (day === 4 && hour >= 8) return true;
-  // If it's Friday, Saturday
-  if (day > 4) return true;
-  // If it's Sunday, Monday, Tuesday, Wednesday -> Closed (unless manual)
   return false;
 };
 
 export const getMonthYearString = (date: Date): string => {
-  return `${date.getMonth() + 1}-${date.getFullYear()}`;
+  const months = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+  return `${months[date.getMonth()]} de ${date.getFullYear()}`;
 };
 
 export const formatPlate = (plate: string): string => {
