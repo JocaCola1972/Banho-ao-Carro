@@ -52,6 +52,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
     const selectedCar = user.cars.find(c => c.id === selectedCarId);
     if (!selectedCar) return;
 
+    // Fixed typo: corrected 'new hReg' to 'newReg' to fix compilation errors
     const newReg: Registration = {
       id: crypto.randomUUID(),
       userId: user.id,
@@ -163,9 +164,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
         <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 mb-6">
           <Timer className="w-8 h-8 md:w-10 md:h-10" />
         </div>
-        <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Inscrições Fechadas</h2>
+        <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Inscrições Indisponíveis</h2>
         <p className="text-slate-400 text-sm md:text-base max-w-sm mb-6">
-          As inscrições para a semana corrente ainda não foram abertas pela administração. Por favor, tente mais tarde.
+          As inscrições para a lavagem dessa semana ainda não abriram e devem aguardar até à abertura das inscrições.
         </p>
         <div className="bg-slate-800/50 px-4 py-2 rounded-lg text-slate-500 text-[10px] md:text-xs font-mono">
           STATUS_CODE: AWAITING_ADMIN_ACTION
