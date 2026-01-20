@@ -26,7 +26,9 @@ interface AdminDashboardProps {
   registrations: Registration[];
   settings: AppSettings;
   onUpdateUsers: (users: User[]) => void;
+  onRemoveUser: (userId: string) => void;
   onUpdateRegistrations: (regs: Registration[]) => void;
+  onRemoveRegistration: (regId: string) => void;
   onUpdateSettings: (settings: AppSettings) => void;
 }
 
@@ -35,7 +37,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   registrations, 
   settings, 
   onUpdateUsers, 
+  onRemoveUser,
   onUpdateRegistrations, 
+  onRemoveRegistration,
   onUpdateSettings 
 }) => {
   const [activeTab, setActiveTab] = useState<'weekly' | 'users' | 'settings' | 'export'>('weekly');
@@ -135,15 +139,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleDeleteUser = (userId: string) => {
     if (confirm('TEM A CERTEZA? Esta ação irá eliminar o utilizador e todos os seus dados permanentemente.')) {
-      const updatedUsers = users.filter(u => u.id !== userId);
-      onUpdateUsers(updatedUsers);
+      onRemoveUser(userId);
     }
   };
 
   const handleCancelRegistration = (regId: string) => {
     if (confirm('Deseja cancelar esta inscrição de lavagem?')) {
-      const updatedRegs = registrations.filter(r => r.id !== regId);
-      onUpdateRegistrations(updatedRegs);
+      onRemoveRegistration(regId);
     }
   };
 

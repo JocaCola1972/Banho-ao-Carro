@@ -10,7 +10,8 @@ import {
   Key, 
   MapPin, 
   Timer,
-  Info
+  Info,
+  Trash2
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -18,9 +19,10 @@ interface DashboardProps {
   registrations: Registration[];
   settings: AppSettings;
   onRegister: (reg: Registration) => void;
+  onCancelRegistration: (regId: string) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, onRegister }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, onRegister, onCancelRegistration }) => {
   const [selectedCarId, setSelectedCarId] = useState<string>(user.cars[0]?.id || '');
   const [parkingSpot, setParkingSpot] = useState('');
   
@@ -66,11 +68,27 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
     onRegister(newReg);
   };
 
+  const handleCancel = () => {
+    if (userRegistrationThisWeek && confirm('Tem a certeza que deseja cancelar a sua inscrição de lavagem para esta semana?')) {
+      onCancelRegistration(userRegistrationThisWeek.id);
+    }
+  };
+
   // Logic 3: Registered this week
   if (userRegistrationThisWeek) {
     return (
       <div className="space-y-6">
-        <div className="bg-emerald-500/10 border border-emerald-500/20 p-8 rounded-3xl text-center flex flex-col items-center">
+        <div className="bg-emerald-500/10 border border-emerald-500/20 p-8 rounded-3xl text-center flex flex-col items-center relative overflow-hidden">
+          <div className="absolute top-4 right-4">
+            <button
+              onClick={handleCancel}
+              className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-all flex items-center gap-2 text-xs font-bold border border-transparent hover:border-red-500/20"
+              title="Cancelar Inscrição"
+            >
+              <Trash2 size={16} />
+              CANCELAR INSCRIÇÃO
+            </button>
+          </div>
           <CheckCircle2 size={64} className="text-emerald-400 mb-4 animate-bounce" />
           <h2 className="text-2xl font-bold text-white mb-2">Lavagem Agendada!</h2>
           <p className="text-slate-300 max-w-md">

@@ -6,7 +6,9 @@ import {
   getStoredSettings, 
   saveUsers, 
   saveRegistrations, 
-  saveSettings 
+  saveSettings,
+  deleteRegistration,
+  deleteUser
 } from './storage';
 import { User, Registration, AppSettings, AuthState } from './types';
 import Login from './pages/Login';
@@ -70,12 +72,30 @@ const App: React.FC = () => {
     }
   };
 
+  const removeUser = async (userId: string) => {
+    try {
+      await deleteUser(userId);
+      setUsers(prev => prev.filter(u => u.id !== userId));
+    } catch (err) {
+      console.error("Delete user failed:", err);
+    }
+  };
+
   const updateRegistrations = async (newRegs: Registration[]) => {
     try {
       await saveRegistrations(newRegs);
       setRegistrations(newRegs);
     } catch (err) {
       console.error("Update registrations failed:", err);
+    }
+  };
+
+  const removeRegistration = async (regId: string) => {
+    try {
+      await deleteRegistration(regId);
+      setRegistrations(prev => prev.filter(r => r.id !== regId));
+    } catch (err) {
+      console.error("Remove registration failed:", err);
     }
   };
 
@@ -110,6 +130,7 @@ const App: React.FC = () => {
             registrations={registrations} 
             settings={settings} 
             onRegister={(reg) => updateRegistrations([...registrations, reg])} 
+            onCancelRegistration={removeRegistration}
           />
         );
       case 'profile':
@@ -138,12 +159,14 @@ const App: React.FC = () => {
             registrations={registrations} 
             settings={settings}
             onUpdateUsers={updateUsers}
+            onRemoveUser={removeUser}
             onUpdateRegistrations={updateRegistrations}
+            onRemoveRegistration={removeRegistration}
             onUpdateSettings={updateSettings}
           />
         );
       default:
-        return <Dashboard user={auth.user!} registrations={registrations} settings={settings} onRegister={(reg) => updateRegistrations([...registrations, reg])} />;
+        return <Dashboard user={auth.user!} registrations={registrations} settings={settings} onRegister={(reg) => updateRegistrations([...registrations, reg])} onCancelRegistration={removeRegistration} />;
     }
   };
 

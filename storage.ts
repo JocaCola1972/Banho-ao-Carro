@@ -43,6 +43,14 @@ export const saveUsers = async (users: User[]) => {
   if (error) throw error;
 };
 
+export const deleteUser = async (userId: string) => {
+  const { error } = await supabase
+    .from('users')
+    .delete()
+    .eq('id', userId);
+  if (error) throw error;
+};
+
 export const getStoredRegistrations = async (): Promise<Registration[]> => {
   try {
     const { data, error } = await supabase
@@ -59,6 +67,14 @@ export const saveRegistrations = async (regs: Registration[]) => {
   const { error } = await supabase
     .from('registrations')
     .upsert(regs);
+  if (error) throw error;
+};
+
+export const deleteRegistration = async (regId: string) => {
+  const { error } = await supabase
+    .from('registrations')
+    .delete()
+    .eq('id', regId);
   if (error) throw error;
 };
 
