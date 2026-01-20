@@ -15,7 +15,10 @@ import {
   Save,
   UserPlus,
   Play,
-  ShieldAlert
+  ShieldAlert,
+  ClipboardList,
+  Car as CarIcon,
+  MapPin
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -35,10 +38,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onUpdateRegistrations, 
   onUpdateSettings 
 }) => {
-  const [activeTab, setActiveTab] = useState<'users' | 'settings' | 'export'>('users');
+  const [activeTab, setActiveTab] = useState<'weekly' | 'users' | 'settings' | 'export'>('weekly');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   
+  const now = new Date();
+  const currentWeek = getWeekNumber(now);
+  const currentYear = now.getFullYear();
+
+  // Filter registrations for the current week
+  const weeklyRegistrations = registrations.filter(
+    r => r.weekNumber === currentWeek && r.year === currentYear
+  ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
   // Form State
   const [formData, setFormData] = useState<Partial<User>>({
     firstName: '',
@@ -50,21 +62,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   });
 
   const handleManualOpen = () => {
-    const now = new Date();
     onUpdateSettings({
       ...settings,
-      manualOpenWeek: getWeekNumber(now),
-      manualOpenYear: now.getFullYear()
+      manualOpenWeek: currentWeek,
+      manualOpenYear: currentYear
     });
   };
 
   const exportCurrentWeek = () => {
-    const now = new Date();
-    const currentWeek = getWeekNumber(now);
-    const weeklyRegs = registrations.filter(r => r.weekNumber === currentWeek && r.year === now.getFullYear());
-    
     let csv = "\uFEFFNome,Carro,Data,Lugar\n";
-    weeklyRegs.forEach(r => {
+    weeklyRegistrations.forEach(r => {
       csv += `"${r.userName}","${r.carDetails}","${new Date(r.date).toLocaleDateString()}","${r.parkingSpot || ''}"\n`;
     });
 
@@ -133,10 +140,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  const handleCancelRegistration = (regId: string) => {
+    if (confirm('Deseja cancelar esta inscrição de lavagem?')) {
+      const updatedRegs = registrations.filter(r => r.id !== regId);
+      onUpdateRegistrations(updatedRegs);
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Tab Navigation */}
       <div className="flex items-center gap-4 border-b border-slate-800 pb-2 overflow-x-auto whitespace-nowrap">
+        <button 
+          onClick={() => setActiveTab('weekly')}
+          className={`pb-2 px-4 font-bold transition-all flex items-center gap-2 ${activeTab === 'weekly' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-slate-500 hover:text-slate-300'}`}
+        >
+          <ClipboardList size={18} />
+          Registos da Semana
+        </button>
         <button 
           onClick={() => setActiveTab('users')}
           className={`pb-2 px-4 font-bold transition-all flex items-center gap-2 ${activeTab === 'users' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-slate-500 hover:text-slate-300'}`}
@@ -159,6 +180,78 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           Relatórios
         </button>
       </div>
+
+      {activeTab === 'weekly' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-xl font-bold flex items-center gap-2">
+              <ClipboardList size={20} className="text-slate-500" />
+              Inscrições da Semana Corrente (W{currentWeek})
+            </h3>
+            <div className="text-xs font-mono text-cyan-500 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/20">
+              {weeklyRegistrations.length} / {settings.weeklyCapacity} LUGARES OCUPADOS
+            </div>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-800/50 text-slate-400 text-xs font-mono uppercase tracking-widest">
+                    <th className="px-6 py-4">Utilizador</th>
+                    <th className="px-6 py-4">Veículo</th>
+                    <th className="px-6 py-4">Lugar / Notas</th>
+                    <th className="px-6 py-4">Data Inscrição</th>
+                    <th className="px-6 py-4 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {weeklyRegistrations.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center text-slate-500 font-mono">
+                        Ainda não existem registos para esta semana operacional.
+                      </td>
+                    </tr>
+                  ) : (
+                    weeklyRegistrations.map(reg => (
+                      <tr key={reg.id} className="hover:bg-slate-800/20 transition-colors group">
+                        <td className="px-6 py-4">
+                          <div className="font-bold text-slate-200">{reg.userName}</div>
+                          <div className="text-[10px] text-slate-500 font-mono uppercase tracking-tighter">ID: {reg.userId.split('-')[0]}...</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-sm">
+                            <CarIcon size={14} className="text-cyan-500" />
+                            <span className="text-slate-300">{reg.carDetails}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-xs">
+                            <MapPin size={12} className="text-amber-500" />
+                            <span className="font-mono text-amber-500/80">{reg.parkingSpot || 'N/A'}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 font-mono text-xs text-slate-400">
+                          {new Date(reg.date).toLocaleDateString('pt-PT')} {new Date(reg.date).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button 
+                            onClick={() => handleCancelRegistration(reg.id)}
+                            className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                            title="Cancelar Inscrição"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'users' && (
         <div className="space-y-4">
@@ -409,7 +502,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
           <h3 className="text-2xl font-bold mb-2 font-mono">Data Extraction Terminal</h3>
           <p className="text-slate-400 max-w-sm mx-auto mb-8 text-sm">
-            Gerar relatório CSV descritivo com todos os registos ativos para a semana operacional em curso.
+            Gerar relatório CSV descritivo com todos os registos ativos para a semana operacional em curso (W{currentWeek}).
           </p>
           <button
             onClick={exportCurrentWeek}
