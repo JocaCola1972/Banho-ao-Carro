@@ -14,11 +14,26 @@ export const areRegistrationsOpen = (settings: AppSettings): boolean => {
   const currentWeek = getWeekNumber(now);
   const currentYear = now.getFullYear();
 
-  // Abertura apenas por controlo manual do administrador
+  // 1. Override Manual: Se o administrador FECHOU explicitamente para esta semana
+  if (settings.manualCloseWeek === currentWeek && settings.manualCloseYear === currentYear) {
+    return false;
+  }
+
+  // 2. Override Manual: Se o administrador ABRIU explicitamente para esta semana (ou antes do tempo)
   if (settings.manualOpenWeek === currentWeek && settings.manualOpenYear === currentYear) {
     return true;
   }
 
+  // 3. Lógica Automática: Quintas-feiras às 8:00 da manhã
+  const day = now.getDay(); // 0 = Domingo, 1 = Segunda... 4 = Quinta, 5 = Sexta, 6 = Sábado
+  const hour = now.getHours();
+
+  // Se for Quinta (4) após as 08:00, ou Sexta (5), ou Sábado (6)
+  if (day > 4 || (day === 4 && hour >= 8)) {
+    return true;
+  }
+
+  // Por defeito, fechado (ex: Segunda a Quinta antes das 08:00)
   return false;
 };
 

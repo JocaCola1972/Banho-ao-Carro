@@ -13,10 +13,13 @@ const DEFAULT_ADMIN: User = {
   cars: []
 };
 
+// Fix: Add missing properties manualCloseWeek and manualCloseYear to match AppSettings type
 const DEFAULT_SETTINGS: AppSettings = {
   weeklyCapacity: 10,
   manualOpenWeek: null,
   manualOpenYear: null,
+  manualCloseWeek: null,
+  manualCloseYear: null,
   loginImageUrl: 'https://images.unsplash.com/photo-1520333789090-1afc82db536a?auto=format&fit=crop&q=80&w=1200'
 };
 

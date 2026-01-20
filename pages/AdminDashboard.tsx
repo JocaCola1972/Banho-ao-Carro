@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, Registration, AppSettings } from '../types';
-import { getWeekNumber } from '../utils';
+import { getWeekNumber, areRegistrationsOpen } from '../utils';
 import * as XLSX from 'xlsx';
 import { 
   Users, 
@@ -23,7 +23,8 @@ import {
   MapPin,
   FileSpreadsheet,
   FileText,
-  CheckCircle2
+  CheckCircle2,
+  PowerOff
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -83,11 +84,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       await onUpdateSettings({
         ...settings,
         manualOpenWeek: currentWeek,
-        manualOpenYear: currentYear
+        manualOpenYear: currentYear,
+        manualCloseWeek: null,
+        manualCloseYear: null
       });
-      alert('SUCESSO: As inscrições para a semana corrente (W' + currentWeek + ') foram abertas!');
+      alert('INSCRIÇÕES ATIVADAS: A janela de agendamento para a semana W' + currentWeek + ' está agora disponível para todos.');
     } catch (err) {
-      alert('ERRO: Não foi possível abrir as inscrições. Verifique a ligação à Cloud.');
+      alert('ERRO: Falha ao comunicar com o servidor.');
+    }
+  };
+
+  const handleManualClose = async () => {
+    try {
+      await onUpdateSettings({
+        ...settings,
+        manualOpenWeek: null,
+        manualOpenYear: null,
+        manualCloseWeek: currentWeek,
+        manualCloseYear: currentYear
+      });
+      alert('INSCRIÇÕES DESATIVADAS: A janela de agendamento foi encerrada manualmente pela administração.');
+    } catch (err) {
+      alert('ERRO: Falha ao comunicar com o servidor.');
     }
   };
 
@@ -187,7 +205,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  const isCurrentWeekOpen = settings.manualOpenWeek === currentWeek && settings.manualOpenYear === currentYear;
+  const isOpen = areRegistrationsOpen(settings);
 
   return (
     <div className="space-y-8">
@@ -211,32 +229,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               Inscrições da Semana Corrente (W{currentWeek})
             </h3>
             
-            <div className="flex flex-wrap items-center gap-4">
-              {/* Botão de Abertura de Inscrições - Movido para aqui */}
-              <button
-                onClick={handleManualOpen}
-                disabled={isCurrentWeekOpen}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-bold transition-all text-xs uppercase tracking-widest ${
-                  isCurrentWeekOpen 
-                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 cursor-default' 
-                  : 'bg-cyan-600 hover:bg-cyan-500 text-white border-cyan-500/50 shadow-lg shadow-cyan-500/20 active:scale-95'
-                }`}
-              >
-                {isCurrentWeekOpen ? (
-                  <>
-                    <CheckCircle2 size={16} />
-                    Inscrições Abertas
-                  </>
-                ) : (
-                  <>
-                    <Play size={16} />
-                    Abrir Inscrições
-                  </>
-                )}
-              </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="bg-slate-900 border border-slate-800 p-1 rounded-2xl flex gap-1">
+                <button
+                  onClick={handleManualOpen}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all text-[10px] uppercase tracking-widest ${
+                    isOpen 
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' 
+                    : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  <Play size={14} />
+                  Ativar
+                </button>
+                <button
+                  onClick={handleManualClose}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all text-[10px] uppercase tracking-widest ${
+                    !isOpen 
+                    ? 'bg-red-600 text-white shadow-lg shadow-red-500/20' 
+                    : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  <PowerOff size={14} />
+                  Desativar
+                </button>
+              </div>
 
-              <div className="text-xs font-mono text-cyan-500 bg-cyan-500/10 px-3 py-2 rounded-xl border border-cyan-500/20">
-                {weeklyRegistrations.length} / {settings.weeklyCapacity} LUGARES
+              <div className="text-[10px] font-mono text-cyan-500 bg-cyan-500/10 px-3 py-2 rounded-xl border border-cyan-500/20 h-[40px] flex items-center">
+                {weeklyRegistrations.length} / {settings.weeklyCapacity} OCUPADOS
               </div>
             </div>
           </div>
@@ -529,8 +549,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <span className="text-xs font-bold uppercase tracking-wider">Info de Operação</span>
                   </div>
                   <p className="text-[10px] text-slate-500 leading-relaxed">
-                    A janela de inscrições é gerida no separador <b>'Registos da Semana'</b>. 
-                    Ative a abertura manual para permitir que os utilizadores iniciem o processo de agendamento.
+                    O controlo total das inscrições está agora centralizado no separador <b>'Registos da Semana'</b>. 
+                    Pode forçar a abertura ou o fecho da janela operacional independentemente do dia da semana.
                   </p>
                 </div>
               </div>
