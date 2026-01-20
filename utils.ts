@@ -10,21 +10,21 @@ export const getWeekNumber = (date: Date): number => {
 };
 
 /**
- * Define se as inscrições estão abertas.
- * O sistema é estritamente manual: só abre se o manualOpenWeek coincidir com a semana atual.
+ * Define se as inscrições estão abertas baseando-se estritamente
+ * no controlo manual do administrador para a semana e ano correntes.
  */
-export const areRegistrationsOpen = (settings: AppSettings): boolean => {
+export const areRegistrationsOpen = (settings: AppSettings | null): boolean => {
   if (!settings) return false;
   
   const now = new Date();
   const currentWeek = getWeekNumber(now);
   const currentYear = now.getFullYear();
 
-  // Verifica se o Administrador ativou explicitamente para esta semana e ano
-  return (
-    settings.manualOpenWeek === currentWeek && 
-    settings.manualOpenYear === currentYear
-  );
+  // Conversão explícita para Number para evitar erros de comparação de tipos (string vs number)
+  const openWeek = settings.manualOpenWeek ? Number(settings.manualOpenWeek) : null;
+  const openYear = settings.manualOpenYear ? Number(settings.manualOpenYear) : null;
+
+  return openWeek === currentWeek && openYear === currentYear;
 };
 
 export const getMonthYearString = (date: Date): string => {
