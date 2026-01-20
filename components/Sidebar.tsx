@@ -7,7 +7,10 @@ import {
   Settings as SettingsIcon, 
   LogOut,
   Car,
-  ShieldCheck
+  ShieldCheck,
+  ClipboardList,
+  Users,
+  Download
 } from 'lucide-react';
 import { User } from '../types';
 
@@ -25,9 +28,12 @@ const Sidebar: React.FC<SidebarProps> = ({ user, activePage, onPageChange, onLog
     { id: 'history', label: 'Histórico', icon: HistoryIcon },
   ];
 
-  if (user.role === 'admin') {
-    menuItems.push({ id: 'admin', label: 'Administração', icon: ShieldCheck });
-  }
+  const adminSubItems = [
+    { id: 'admin-weekly', label: 'Registos da Semana', icon: ClipboardList },
+    { id: 'admin-users', label: 'Utilizadores', icon: Users },
+    { id: 'admin-settings', label: 'Definições', icon: SettingsIcon },
+    { id: 'admin-export', label: 'Relatórios', icon: Download },
+  ];
 
   return (
     <aside className="fixed left-0 top-0 h-full w-64 bg-slate-900 border-r border-slate-800 hidden lg:flex flex-col z-50">
@@ -41,7 +47,8 @@ const Sidebar: React.FC<SidebarProps> = ({ user, activePage, onPageChange, onLog
         </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+        <div className="text-[10px] font-mono text-slate-600 uppercase tracking-widest px-4 mb-2">Principal</div>
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activePage === item.id;
@@ -60,6 +67,41 @@ const Sidebar: React.FC<SidebarProps> = ({ user, activePage, onPageChange, onLog
             </button>
           );
         })}
+
+        {user.role === 'admin' && (
+          <div className="pt-4 space-y-2">
+            <div className="text-[10px] font-mono text-slate-600 uppercase tracking-widest px-4 mb-2">Administração</div>
+            <button
+              onClick={() => onPageChange('admin')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${
+                activePage === 'admin' 
+                  ? 'bg-slate-800 text-cyan-400 border border-cyan-500/20' 
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+              }`}
+            >
+              <ShieldCheck size={20} />
+              Geral
+            </button>
+            {adminSubItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activePage === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onPageChange(item.id)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium pl-8 ${
+                    isActive 
+                      ? 'text-cyan-400 bg-cyan-500/5 border-r-2 border-cyan-500' 
+                      : 'text-slate-500 hover:bg-slate-800/50 hover:text-slate-300'
+                  }`}
+                >
+                  <Icon size={18} />
+                  <span className="text-sm">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </nav>
 
       <div className="p-4 border-t border-slate-800">

@@ -122,6 +122,31 @@ const App: React.FC = () => {
   }
 
   const renderPage = () => {
+    const isAdminPage = currentPage.startsWith('admin');
+    
+    if (isAdminPage) {
+      if (auth.user?.role !== 'admin') return <div className="p-8 text-center text-red-500 font-bold">ACESSO NEGADO: PROTOCOLO DE SEGURANÇA ATIVADO</div>;
+      
+      let initialTab: 'weekly' | 'users' | 'settings' | 'export' = 'weekly';
+      if (currentPage === 'admin-users') initialTab = 'users';
+      if (currentPage === 'admin-settings') initialTab = 'settings';
+      if (currentPage === 'admin-export') initialTab = 'export';
+
+      return (
+        <AdminDashboard 
+          users={users} 
+          registrations={registrations} 
+          settings={settings}
+          onUpdateUsers={updateUsers}
+          onRemoveUser={removeUser}
+          onUpdateRegistrations={updateRegistrations}
+          onRemoveRegistration={removeRegistration}
+          onUpdateSettings={updateSettings}
+          forcedTab={initialTab}
+        />
+      );
+    }
+
     switch (currentPage) {
       case 'dashboard':
         return (
@@ -149,20 +174,6 @@ const App: React.FC = () => {
           <History 
             registrations={registrations} 
             user={auth.user!} 
-          />
-        );
-      case 'admin':
-        if (auth.user?.role !== 'admin') return <div className="p-8 text-center text-red-500 font-bold">ACESSO NEGADO: PROTOCOLO DE SEGURANÇA ATIVADO</div>;
-        return (
-          <AdminDashboard 
-            users={users} 
-            registrations={registrations} 
-            settings={settings}
-            onUpdateUsers={updateUsers}
-            onRemoveUser={removeUser}
-            onUpdateRegistrations={updateRegistrations}
-            onRemoveRegistration={removeRegistration}
-            onUpdateSettings={updateSettings}
           />
         );
       default:

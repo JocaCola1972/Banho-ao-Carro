@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Registration, AppSettings } from '../types';
 import { getWeekNumber } from '../utils';
 import { 
@@ -16,6 +16,7 @@ import {
   UserPlus,
   Play,
   ShieldAlert,
+  ShieldCheck,
   ClipboardList,
   Car as CarIcon,
   MapPin
@@ -30,6 +31,7 @@ interface AdminDashboardProps {
   onUpdateRegistrations: (regs: Registration[]) => void;
   onRemoveRegistration: (regId: string) => void;
   onUpdateSettings: (settings: AppSettings) => void;
+  forcedTab?: 'weekly' | 'users' | 'settings' | 'export';
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
@@ -40,12 +42,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onRemoveUser,
   onUpdateRegistrations, 
   onRemoveRegistration,
-  onUpdateSettings 
+  onUpdateSettings,
+  forcedTab
 }) => {
-  const [activeTab, setActiveTab] = useState<'weekly' | 'users' | 'settings' | 'export'>('weekly');
+  const [activeTab, setActiveTab] = useState<'weekly' | 'users' | 'settings' | 'export'>(forcedTab || 'weekly');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   
+  useEffect(() => {
+    if (forcedTab) {
+      setActiveTab(forcedTab);
+    }
+  }, [forcedTab]);
+
   const now = new Date();
   const currentWeek = getWeekNumber(now);
   const currentYear = now.getFullYear();
@@ -151,40 +160,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   return (
     <div className="space-y-8">
-      {/* Tab Navigation */}
-      <div className="flex items-center gap-4 border-b border-slate-800 pb-2 overflow-x-auto whitespace-nowrap">
-        <button 
-          onClick={() => setActiveTab('weekly')}
-          className={`pb-2 px-4 font-bold transition-all flex items-center gap-2 ${activeTab === 'weekly' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-slate-500 hover:text-slate-300'}`}
-        >
-          <ClipboardList size={18} />
-          Registos da Semana
-        </button>
-        <button 
-          onClick={() => setActiveTab('users')}
-          className={`pb-2 px-4 font-bold transition-all flex items-center gap-2 ${activeTab === 'users' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-slate-500 hover:text-slate-300'}`}
-        >
-          <Users size={18} />
-          Utilizadores
-        </button>
-        <button 
-          onClick={() => setActiveTab('settings')}
-          className={`pb-2 px-4 font-bold transition-all flex items-center gap-2 ${activeTab === 'settings' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-slate-500 hover:text-slate-300'}`}
-        >
-          <Settings size={18} />
-          Definições
-        </button>
-        <button 
-          onClick={() => setActiveTab('export')}
-          className={`pb-2 px-4 font-bold transition-all flex items-center gap-2 ${activeTab === 'export' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-slate-500 hover:text-slate-300'}`}
-        >
-          <Download size={18} />
-          Relatórios
-        </button>
+      {/* Visual Header (Breadcrumb style) */}
+      <div className="flex items-center gap-2 text-xs font-mono text-slate-500 uppercase tracking-widest mb-4">
+        {/* Added missing ShieldCheck import from lucide-react */}
+        <ShieldCheck size={14} />
+        <span>Administração</span>
+        <span>/</span>
+        <span className="text-cyan-400">
+          {activeTab === 'weekly' && 'Registos da Semana'}
+          {activeTab === 'users' && 'Utilizadores'}
+          {activeTab === 'settings' && 'Definições'}
+          {activeTab === 'export' && 'Relatórios'}
+        </span>
       </div>
 
       {activeTab === 'weekly' && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-in fade-in slide-in-from-left-2">
           <div className="flex justify-between items-center">
             <h3 className="text-xl font-bold flex items-center gap-2">
               <ClipboardList size={20} className="text-slate-500" />
@@ -256,7 +247,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       {activeTab === 'users' && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-in fade-in slide-in-from-left-2">
           <div className="flex justify-between items-center">
             <h3 className="text-xl font-bold flex items-center gap-2">
               <Users size={20} className="text-slate-500" />
@@ -431,7 +422,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       {activeTab === 'settings' && (
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-left-2">
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl space-y-6 shadow-xl">
             <h3 className="text-xl font-bold flex items-center gap-2">
               <Settings size={20} className="text-slate-500" />
@@ -497,7 +488,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       {activeTab === 'export' && (
-        <div className="bg-slate-900 border border-slate-800 p-12 rounded-3xl text-center shadow-xl relative overflow-hidden">
+        <div className="bg-slate-900 border border-slate-800 p-12 rounded-3xl text-center shadow-xl relative overflow-hidden animate-in fade-in slide-in-from-left-2">
            <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_70%)] from-cyan-500"></div>
           <div className="w-20 h-20 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-400 mx-auto mb-6 border border-cyan-500/20">
             <Download size={40} className="animate-pulse" />
