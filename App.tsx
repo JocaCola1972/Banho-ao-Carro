@@ -18,6 +18,7 @@ import Profile from './pages/Profile';
 import History from './pages/History';
 import Sidebar from './components/Sidebar';
 import { Shield, Cloud, Lock, Loader2, RefreshCw, Menu, X } from 'lucide-react';
+import { getWeekNumber } from './utils';
 
 const App: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -42,8 +43,10 @@ const App: React.FC = () => {
       setRegistrations(r);
       setAppSettings(s);
       setLastSync(new Date().toLocaleTimeString());
+      return { registrations: r, settings: s };
     } catch (err) {
       console.error("Failed to fetch data from Supabase:", err);
+      return null;
     } finally {
       if (manual) setTimeout(() => setIsSyncing(false), 800);
       setLoading(false);
@@ -90,6 +93,35 @@ const App: React.FC = () => {
     } catch (err) {
       console.error("Update registrations failed:", err);
     }
+  };
+
+  /**
+   * Função de registo reforçada:
+   * 1. Sincroniza com o servidor antes de confirmar.
+   * 2. Valida se ainda existem vagas na semana.
+   */
+  const handleRegisterWithValidation = async (newReg: Registration): Promise<boolean> => {
+    // 1. Sincronização forçada
+    const latestData = await fetchData(true);
+    if (!latestData || !settings) return false;
+
+    // 2. Validação de quota em tempo real
+    const currentWeek = getWeekNumber(new Date());
+    const currentYear = new Date().getFullYear();
+    
+    const weeklyTotal = latestData.registrations.filter(
+      r => r.weekNumber === currentWeek && r.year === currentYear
+    ).length;
+
+    if (weeklyTotal >= settings.weeklyCapacity) {
+      console.warn("Quota esgotada detetada na validação pré-registo.");
+      return false; 
+    }
+
+    // 3. Se houver vaga, grava
+    const updatedRegs = [...latestData.registrations, newReg];
+    await updateRegistrations(updatedRegs);
+    return true;
   };
 
   const handleUpdateRegistration = async (updatedReg: Registration) => {
@@ -166,7 +198,7 @@ const App: React.FC = () => {
             user={auth.user!} 
             registrations={registrations} 
             settings={settings} 
-            onRegister={(reg) => updateRegistrations([...registrations, reg])} 
+            onRegister={handleRegisterWithValidation} 
             onUpdateRegistration={handleUpdateRegistration}
             onCancelRegistration={removeRegistration}
           />
@@ -190,7 +222,7 @@ const App: React.FC = () => {
           />
         );
       default:
-        return <Dashboard user={auth.user!} registrations={registrations} settings={settings} onRegister={(reg) => updateRegistrations([...registrations, reg])} onUpdateRegistration={handleUpdateRegistration} onCancelRegistration={removeRegistration} />;
+        return <Dashboard user={auth.user!} registrations={registrations} settings={settings} onRegister={handleRegisterWithValidation} onUpdateRegistration={handleUpdateRegistration} onCancelRegistration={removeRegistration} />;
     }
   };
 

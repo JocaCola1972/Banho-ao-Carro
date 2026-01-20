@@ -16,14 +16,15 @@ import {
   ParkingCircle,
   Edit,
   Save,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 
 interface DashboardProps {
   user: User;
   registrations: Registration[];
   settings: AppSettings;
-  onRegister: (reg: Registration) => void;
+  onRegister: (reg: Registration) => Promise<boolean>;
   onUpdateRegistration: (reg: Registration) => void;
   onCancelRegistration: (regId: string) => void;
 }
@@ -33,6 +34,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
   const [locationType, setLocationType] = useState<'central' | 'panoramico' | null>(null);
   const [locationDetail, setLocationDetail] = useState('');
   const [isEditingLocation, setIsEditingLocation] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const now = new Date();
   const currentWeek = getWeekNumber(now);
@@ -55,10 +57,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
   ).length;
   const isFull = weeklyTotal >= settings.weeklyCapacity;
 
-  const handleRegister = () => {
-    if (!selectedCarId || !locationType) return;
+  const handleRegister = async () => {
+    if (!selectedCarId || !locationType || isSubmitting) return;
+    
+    setIsSubmitting(true);
+    
     const selectedCar = user.cars.find(c => c.id === selectedCarId);
-    if (!selectedCar) return;
+    if (!selectedCar) {
+      setIsSubmitting(false);
+      return;
+    }
 
     const detailText = locationDetail.trim() 
       ? (locationType === 'central' ? ` - Piso ${locationDetail}` : ` - Lugar ${locationDetail}`)
@@ -81,7 +89,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
       parkingSpot: fullLocation
     };
 
-    onRegister(newReg);
+    try {
+      // O onRegister agora é assíncrono e valida a quota no servidor antes de gravar
+      const success = await onRegister(newReg);
+      if (!success) {
+        // Se falhar (ex: ficou cheio entretanto), o estado global será atualizado 
+        // e o componente voltará a renderizar mostrando o ecrã de "Cheio"
+      }
+    } catch (error) {
+      console.error("Erro no registo:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleUpdateLocation = () => {
@@ -299,12 +318,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
                   {user.cars.map(car => (
                     <button
                       key={car.id}
+                      disabled={isSubmitting}
                       onClick={() => setSelectedCarId(car.id)}
                       className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left ${
                         selectedCarId === car.id 
                           ? 'bg-cyan-500/10 border-cyan-500 text-white shadow-lg shadow-cyan-500/10' 
                           : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:bg-slate-800'
-                      }`}
+                      } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <div>
                         <div className="font-bold text-sm md:text-base">{car.brand} {car.model}</div>
@@ -325,23 +345,25 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
               <label className="text-xs font-medium text-slate-500 block font-mono uppercase tracking-widest">Localização (Onde está o carro?)</label>
               <div className="grid grid-cols-2 gap-4">
                 <button
+                  disabled={isSubmitting}
                   onClick={() => setLocationType('central')}
                   className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${
                     locationType === 'central'
                       ? 'bg-cyan-500/10 border-cyan-500 text-cyan-400'
                       : 'bg-slate-800/50 border-slate-700 text-slate-500 hover:border-slate-600'
-                  }`}
+                  } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <Building2 size={24} />
                   <span className="text-xs font-bold uppercase">Central Office</span>
                 </button>
                 <button
+                  disabled={isSubmitting}
                   onClick={() => setLocationType('panoramico')}
                   className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${
                     locationType === 'panoramico'
                       ? 'bg-blue-500/10 border-blue-500 text-blue-400'
                       : 'bg-slate-800/50 border-slate-700 text-slate-500 hover:border-slate-600'
-                  }`}
+                  } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <ParkingCircle size={24} />
                   <span className="text-xs font-bold uppercase">Panorâmico</span>
@@ -356,10 +378,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
                     </label>
                     <input
                       type="text"
+                      disabled={isSubmitting}
                       placeholder={locationType === 'central' ? "Ex: Piso 2" : "Ex: Lugar 45"}
                       value={locationDetail}
                       onChange={(e) => setLocationDetail(e.target.value)}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 text-white focus:ring-2 focus:ring-cyan-500 outline-none transition-all placeholder:text-slate-600 text-sm"
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 text-white focus:ring-2 focus:ring-cyan-500 outline-none transition-all placeholder:text-slate-600 text-sm disabled:opacity-50"
                     />
                   </div>
                 </div>
@@ -368,12 +391,25 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
           </div>
 
           <button
-            disabled={!selectedCarId || isFull || !locationType}
+            disabled={!selectedCarId || isFull || !locationType || isSubmitting}
             onClick={handleRegister}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-sm"
+            className={`w-full py-4 rounded-xl font-bold shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-sm ${
+              isSubmitting 
+              ? 'bg-slate-700 text-slate-400 cursor-wait' 
+              : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/20'
+            }`}
           >
-            <Calendar size={18} />
-            CONFIRMAR AGENDAMENTO
+            {isSubmitting ? (
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                A VALIDAR QUOTA...
+              </>
+            ) : (
+              <>
+                <Calendar size={18} />
+                CONFIRMAR AGENDAMENTO
+              </>
+            )}
           </button>
         </div>
 
