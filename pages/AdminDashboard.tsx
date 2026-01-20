@@ -22,7 +22,8 @@ import {
   Car as CarIcon,
   MapPin,
   FileSpreadsheet,
-  FileText
+  FileText,
+  CheckCircle2
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -77,13 +78,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     password: '123'
   });
 
-  const handleManualOpen = () => {
-    onUpdateSettings({
-      ...settings,
-      manualOpenWeek: currentWeek,
-      manualOpenYear: currentYear
-    });
-    alert('As inscrições para a semana corrente foram abertas com sucesso!');
+  const handleManualOpen = async () => {
+    try {
+      await onUpdateSettings({
+        ...settings,
+        manualOpenWeek: currentWeek,
+        manualOpenYear: currentYear
+      });
+      alert('SUCESSO: As inscrições para a semana corrente (W' + currentWeek + ') foram abertas!');
+    } catch (err) {
+      alert('ERRO: Não foi possível abrir as inscrições. Verifique a ligação à Cloud.');
+    }
   };
 
   const prepareExportData = (data: Registration[]) => {
@@ -205,12 +210,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <ClipboardList size={20} className="text-slate-500" />
               Inscrições da Semana Corrente (W{currentWeek})
             </h3>
-            <div className="flex items-center gap-4">
-              <div className={`text-[10px] font-mono px-3 py-1 rounded-full border ${isCurrentWeekOpen ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
-                {isCurrentWeekOpen ? 'INSCRIÇÕES ABERTAS' : 'INSCRIÇÕES FECHADAS'}
-              </div>
-              <div className="text-xs font-mono text-cyan-500 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/20">
-                {weeklyRegistrations.length} / {settings.weeklyCapacity} LUGARES OCUPADOS
+            
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Botão de Abertura de Inscrições - Movido para aqui */}
+              <button
+                onClick={handleManualOpen}
+                disabled={isCurrentWeekOpen}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-bold transition-all text-xs uppercase tracking-widest ${
+                  isCurrentWeekOpen 
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 cursor-default' 
+                  : 'bg-cyan-600 hover:bg-cyan-500 text-white border-cyan-500/50 shadow-lg shadow-cyan-500/20 active:scale-95'
+                }`}
+              >
+                {isCurrentWeekOpen ? (
+                  <>
+                    <CheckCircle2 size={16} />
+                    Inscrições Abertas
+                  </>
+                ) : (
+                  <>
+                    <Play size={16} />
+                    Abrir Inscrições
+                  </>
+                )}
+              </button>
+
+              <div className="text-xs font-mono text-cyan-500 bg-cyan-500/10 px-3 py-2 rounded-xl border border-cyan-500/20">
+                {weeklyRegistrations.length} / {settings.weeklyCapacity} LUGARES
               </div>
             </div>
           </div>
@@ -273,7 +299,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
 
-          {/* Seção de Exportação Semanal movida para aqui */}
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-cyan-500/10 rounded-xl text-cyan-400">
@@ -380,7 +405,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {/* User Edit/Create Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
           <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col">
@@ -499,26 +523,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   />
                 </div>
 
-                <div className="pt-4 border-t border-slate-800">
-                  <h4 className="font-bold mb-2 flex items-center gap-2">
-                    <ShieldAlert size={16} className="text-amber-500" />
-                    Controlo de Janela de Inscrição
-                  </h4>
-                  <p className="text-xs text-slate-500 mb-4">
-                    Manual Ops: As inscrições são abertas exclusivamente por ação direta da administração.
+                <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
+                  <div className="flex items-center gap-2 text-amber-500 mb-2">
+                    <ShieldAlert size={16} />
+                    <span className="text-xs font-bold uppercase tracking-wider">Info de Operação</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-relaxed">
+                    A janela de inscrições é gerida no separador <b>'Registos da Semana'</b>. 
+                    Ative a abertura manual para permitir que os utilizadores iniciem o processo de agendamento.
                   </p>
-                  <button
-                    onClick={handleManualOpen}
-                    disabled={isCurrentWeekOpen}
-                    className={`w-full py-3 rounded-xl border flex items-center justify-center gap-2 font-bold transition-all group ${
-                      isCurrentWeekOpen 
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 cursor-default' 
-                      : 'bg-slate-800 hover:bg-slate-700 text-cyan-400 border-cyan-500/30 active:scale-95'
-                    }`}
-                  >
-                    <Play size={18} className={isCurrentWeekOpen ? '' : 'group-hover:translate-x-1 transition-transform'} />
-                    {isCurrentWeekOpen ? 'INSCRIÇÕES ABERTAS (W' + currentWeek + ')' : 'ABRIR INSCRIÇÕES DA SEMANA'}
-                  </button>
                 </div>
               </div>
             </div>
@@ -552,7 +565,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
 
-          {/* Seção de Exportação Histórica movida para aqui */}
           <div className="bg-slate-900 border border-emerald-500/20 p-8 rounded-3xl shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden group">
             <div className="absolute inset-0 pointer-events-none opacity-[0.02] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_70%)] from-emerald-500"></div>
             <div className="flex items-center gap-5 relative z-10">
