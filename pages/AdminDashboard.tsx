@@ -60,7 +60,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'general' | 'weekly' | 'users' | 'settings'>(forcedTab || 'general');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
   
   useEffect(() => {
     if (forcedTab) {
@@ -84,42 +83,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     role: 'user',
     password: '123'
   });
-
-  const handleManualOpen = async () => {
-    if (isProcessing) return;
-    setIsProcessing(true);
-    try {
-      await onUpdateSettings({
-        ...settings,
-        manualOpenWeek: currentWeek,
-        manualOpenYear: currentYear,
-        manualCloseWeek: null,
-        manualCloseYear: null
-      });
-    } catch (err) {
-      alert('Erro ao ativar inscrições.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleManualClose = async () => {
-    if (isProcessing) return;
-    setIsProcessing(true);
-    try {
-      await onUpdateSettings({
-        ...settings,
-        manualOpenWeek: null,
-        manualOpenYear: null,
-        manualCloseWeek: currentWeek,
-        manualCloseYear: currentYear
-      });
-    } catch (err) {
-      alert('Erro ao desativar inscrições.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const exportToExcel = (data: Registration[], fileName: string) => {
     const preparedData = data.map(r => ({
@@ -220,7 +183,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className={`text-xl font-bold uppercase tracking-tighter ${isOpen ? 'text-emerald-400' : 'text-red-400'}`}>
                 {isOpen ? 'Inscrições Abertas' : 'Sistema Trancado'}
               </div>
-              <div className="text-[10px] text-slate-600 font-mono mt-1">CONTROLO_MANUAL_ADMIN</div>
+              <div className="text-[10px] text-slate-600 font-mono mt-1">PROTOCOLO_AUTOMÁTICO</div>
             </div>
           </div>
 
@@ -260,36 +223,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <ClipboardList size={20} className="text-slate-500" />
               Janela Operacional W{currentWeek}
             </h3>
-            
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="bg-slate-900 border border-slate-800 p-1.5 rounded-2xl flex gap-1.5 shadow-inner">
-                <button
-                  onClick={handleManualOpen}
-                  disabled={isProcessing}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all text-[10px] uppercase tracking-widest ${
-                    isOpen 
-                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 ring-2 ring-emerald-500/20' 
-                    : 'bg-slate-800 text-slate-500 hover:text-slate-300 hover:bg-slate-700'
-                  }`}
-                >
-                  {isProcessing && isOpen ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
-                  Abrir Inscrições
-                </button>
-
-                <button
-                  onClick={handleManualClose}
-                  disabled={isProcessing}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all text-[10px] uppercase tracking-widest ${
-                    !isOpen 
-                    ? 'bg-red-600 text-white shadow-lg shadow-red-500/30 ring-2 ring-red-500/20' 
-                    : 'bg-slate-800 text-slate-500 hover:text-slate-300 hover:bg-slate-700'
-                  }`}
-                >
-                  {isProcessing && !isOpen ? <Loader2 size={14} className="animate-spin" /> : <PowerOff size={14} />}
-                  Fechar Janela
-                </button>
-              </div>
-            </div>
           </div>
 
           <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
