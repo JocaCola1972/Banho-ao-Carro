@@ -42,8 +42,9 @@ const App: React.FC = () => {
       setUsers(u);
       setRegistrations(r);
       setAppSettings(s);
-      setLastSync(new Date().toLocaleTimeString());
-      return { registrations: r, settings: s };
+      const time = new Date().toLocaleTimeString();
+      setLastSync(time);
+      return { registrations: r, settings: s, time };
     } catch (err) {
       console.error("Failed to fetch data from Supabase:", err);
       return null;
@@ -95,17 +96,10 @@ const App: React.FC = () => {
     }
   };
 
-  /**
-   * Função de registo reforçada:
-   * 1. Sincroniza com o servidor antes de confirmar.
-   * 2. Valida se ainda existem vagas na semana.
-   */
   const handleRegisterWithValidation = async (newReg: Registration): Promise<boolean> => {
-    // 1. Sincronização forçada
     const latestData = await fetchData(true);
     if (!latestData || !settings) return false;
 
-    // 2. Validação de quota em tempo real
     const currentWeek = getWeekNumber(new Date());
     const currentYear = new Date().getFullYear();
     
@@ -118,7 +112,6 @@ const App: React.FC = () => {
       return false; 
     }
 
-    // 3. Se houver vaga, grava
     const updatedRegs = [...latestData.registrations, newReg];
     await updateRegistrations(updatedRegs);
     return true;
@@ -150,6 +143,11 @@ const App: React.FC = () => {
   const handlePageChange = (page: string) => {
     setCurrentPage(page);
     setIsMobileMenuOpen(false);
+    
+    // Sincronização automática ao selecionar 'Registos da Semana'
+    if (page === 'admin-weekly') {
+      fetchData(true);
+    }
   };
 
   if (loading || !settings) {
@@ -187,6 +185,7 @@ const App: React.FC = () => {
           onRemoveRegistration={removeRegistration}
           onUpdateSettings={updateSettings}
           forcedTab={initialTab}
+          lastSyncTime={lastSync}
         />
       );
     }
@@ -228,7 +227,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex bg-slate-950 text-slate-200 cyber-grid relative overflow-x-hidden">
-      {/* Background Decorations */}
       <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none hidden md:block">
         <Cloud size={300} className="animate-pulse" />
       </div>

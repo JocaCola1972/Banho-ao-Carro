@@ -27,7 +27,9 @@ import {
   LayoutDashboard,
   BarChart3,
   ShieldAlert,
-  Activity
+  Activity,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -40,6 +42,7 @@ interface AdminDashboardProps {
   onRemoveRegistration: (regId: string) => void;
   onUpdateSettings: (settings: AppSettings) => void;
   forcedTab?: 'general' | 'weekly' | 'users' | 'settings';
+  lastSyncTime?: string;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
@@ -51,14 +54,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onUpdateRegistrations, 
   onRemoveRegistration,
   onUpdateSettings,
-  forcedTab
+  forcedTab,
+  lastSyncTime
 }) => {
   const [activeTab, setActiveTab] = useState<'general' | 'weekly' | 'users' | 'settings'>(forcedTab || 'general');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // Sincroniza o separador ativo com a navegação da Sidebar
   useEffect(() => {
     if (forcedTab) {
       setActiveTab(forcedTab);
@@ -161,6 +164,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const isOpen = areRegistrationsOpen(settings);
+  const isOverCapacity = weeklyRegistrations.length > settings.weeklyCapacity;
 
   return (
     <div className="space-y-8">
@@ -176,7 +180,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </span>
       </div>
 
-      {/* VIEW: GERAL (STATS) */}
       {activeTab === 'general' && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -201,7 +204,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="text-3xl font-black text-white">{weeklyRegistrations.length} / {settings.weeklyCapacity}</div>
               <div className="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
                 <div 
-                  className="h-full bg-amber-500 transition-all duration-1000" 
+                  className={`h-full transition-all duration-1000 ${isOverCapacity ? 'bg-red-500' : 'bg-amber-500'}`} 
                   style={{ width: `${Math.min(100, (weeklyRegistrations.length / settings.weeklyCapacity) * 100)}%` }}
                 ></div>
               </div>
@@ -230,9 +233,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {/* VIEW: REGISTOS DA SEMANA */}
       {activeTab === 'weekly' && (
         <div className="space-y-6 animate-in fade-in slide-in-from-left-2">
+          {/* Status Bar */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold font-mono uppercase tracking-wider ${isOpen ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                {isOpen ? <CheckCircle2 size={12}/> : <ShieldAlert size={12}/>}
+                Portas: {isOpen ? 'Abertas' : 'Trancadas'}
+              </div>
+              <div className="text-[10px] font-mono text-slate-500">
+                LATEST_SYNC: <span className="text-cyan-400">{lastSyncTime || '---'}</span>
+              </div>
+            </div>
+            
+            {isOverCapacity && (
+              <div className="flex items-center gap-2 text-red-400 text-[10px] font-bold animate-pulse">
+                <AlertTriangle size={14} />
+                ALERTA: CAPACIDADE EXCEDIDA
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <h3 className="text-xl font-bold flex items-center gap-2">
               <ClipboardList size={20} className="text-slate-500" />
@@ -251,7 +273,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   }`}
                 >
                   {isProcessing && isOpen ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
-                  Ativar
+                  Abrir Inscrições
                 </button>
 
                 <button
@@ -264,7 +286,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   }`}
                 >
                   {isProcessing && !isOpen ? <Loader2 size={14} className="animate-spin" /> : <PowerOff size={14} />}
-                  Desativar
+                  Fechar Janela
                 </button>
               </div>
             </div>
@@ -278,7 +300,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <th className="px-6 py-4">Utilizador</th>
                     <th className="px-6 py-4">Veículo</th>
                     <th className="px-6 py-4">Lugar</th>
-                    <th className="px-6 py-4">Data</th>
+                    <th className="px-6 py-4">Data/Hora</th>
                     <th className="px-6 py-4 text-right">Ações</th>
                   </tr>
                 </thead>
@@ -298,11 +320,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           {reg.carDetails}
                         </td>
                         <td className="px-6 py-4 text-xs font-mono text-amber-500">{reg.parkingSpot || '---'}</td>
-                        <td className="px-6 py-4 font-mono text-xs text-slate-400">
-                          {new Date(reg.date).toLocaleDateString('pt-PT')}
+                        <td className="px-6 py-4 font-mono text-[10px] text-slate-400">
+                          {new Date(reg.date).toLocaleDateString('pt-PT')} {new Date(reg.date).toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'})}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <button onClick={() => onRemoveRegistration(reg.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg">
+                          <button onClick={() => onRemoveRegistration(reg.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors">
                             <Trash2 size={16} />
                           </button>
                         </td>
@@ -324,7 +346,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <p className="text-xs text-slate-500 font-mono uppercase tracking-tight">Relatório_Semanal_W{currentWeek}</p>
               </div>
             </div>
-            <button onClick={() => exportToExcel(weeklyRegistrations, `lavagens-w${currentWeek}`)} className="bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/20 font-bold py-2.5 px-5 rounded-xl text-[10px] uppercase tracking-widest flex items-center gap-2 transition-all">
+            <button onClick={() => exportToExcel(weeklyRegistrations, `lavagens-w${currentWeek}`)} className="bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/20 font-bold py-2.5 px-5 rounded-xl text-[10px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg shadow-cyan-500/5">
               <Download size={16} /> Descarregar Excel
             </button>
           </div>
