@@ -134,10 +134,9 @@ const App: React.FC = () => {
     if (isAdminPage) {
       if (auth.user?.role !== 'admin') return <div className="p-8 text-center text-red-500 font-bold">ACESSO NEGADO: PROTOCOLO DE SEGURANÇA ATIVADO</div>;
       
-      let initialTab: 'weekly' | 'users' | 'settings' | 'export' = 'weekly';
+      let initialTab: 'weekly' | 'users' | 'settings' = 'weekly';
       if (currentPage === 'admin-users') initialTab = 'users';
       if (currentPage === 'admin-settings') initialTab = 'settings';
-      if (currentPage === 'admin-export') initialTab = 'export';
 
       return (
         <AdminDashboard 

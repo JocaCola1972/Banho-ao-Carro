@@ -34,7 +34,7 @@ interface AdminDashboardProps {
   onUpdateRegistrations: (regs: Registration[]) => void;
   onRemoveRegistration: (regId: string) => void;
   onUpdateSettings: (settings: AppSettings) => void;
-  forcedTab?: 'weekly' | 'users' | 'settings' | 'export';
+  forcedTab?: 'weekly' | 'users' | 'settings';
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
@@ -48,7 +48,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onUpdateSettings,
   forcedTab
 }) => {
-  const [activeTab, setActiveTab] = useState<'weekly' | 'users' | 'settings' | 'export'>(forcedTab || 'weekly');
+  const [activeTab, setActiveTab] = useState<'weekly' | 'users' | 'settings'>(forcedTab || 'weekly');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   
@@ -195,13 +195,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {activeTab === 'weekly' && 'Registos da Semana'}
           {activeTab === 'users' && 'Utilizadores'}
           {activeTab === 'settings' && 'Definições'}
-          {activeTab === 'export' && 'Relatórios'}
         </span>
       </div>
 
       {activeTab === 'weekly' && (
-        <div className="space-y-4 animate-in fade-in slide-in-from-left-2">
-          <div className="flex justify-between items-center">
+        <div className="space-y-6 animate-in fade-in slide-in-from-left-2">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <h3 className="text-xl font-bold flex items-center gap-2">
               <ClipboardList size={20} className="text-slate-500" />
               Inscrições da Semana Corrente (W{currentWeek})
@@ -271,6 +270,35 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          {/* Seção de Exportação Semanal movida para aqui */}
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-cyan-500/10 rounded-xl text-cyan-400">
+                <FileSpreadsheet size={24} />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-200">Relatório Semanal</h4>
+                <p className="text-xs text-slate-500">Exportar registos da semana corrente para Excel ou CSV.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <button
+                onClick={() => exportToExcel(weeklyRegistrations, `lavagens-semana-${currentWeek}`)}
+                className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/20 font-bold py-2 px-4 rounded-xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
+              >
+                <FileSpreadsheet size={16} />
+                Excel
+              </button>
+              <button
+                onClick={() => exportToCSV(weeklyRegistrations, `lavagens-semana-${currentWeek}`)}
+                className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 font-bold py-2 px-4 rounded-xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
+              >
+                <FileText size={16} />
+                CSV
+              </button>
             </div>
           </div>
         </div>
@@ -452,142 +480,106 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       {activeTab === 'settings' && (
-        <div className="grid md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-left-2">
-          <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl space-y-6 shadow-xl">
-            <h3 className="text-xl font-bold flex items-center gap-2">
-              <Settings size={20} className="text-slate-500" />
-              Parâmetros do Sistema
-            </h3>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm text-slate-400 font-mono">Capacidade Semanal (Vagas)</label>
-                <input
-                  type="number"
-                  value={settings.weeklyCapacity}
-                  onChange={(e) => onUpdateSettings({ ...settings, weeklyCapacity: parseInt(e.target.value) || 0 })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 focus:ring-2 focus:ring-cyan-500 outline-none transition-all font-mono"
-                />
-              </div>
-
-              <div className="pt-4 border-t border-slate-800">
-                <h4 className="font-bold mb-2 flex items-center gap-2">
-                   <ShieldAlert size={16} className="text-amber-500" />
-                   Controlo de Janela de Inscrição
-                </h4>
-                <p className="text-xs text-slate-500 mb-4">
-                  Manual Ops: As inscrições são abertas exclusivamente por ação direta da administração.
-                </p>
-                <button
-                  onClick={handleManualOpen}
-                  disabled={isCurrentWeekOpen}
-                  className={`w-full py-3 rounded-xl border flex items-center justify-center gap-2 font-bold transition-all group ${
-                    isCurrentWeekOpen 
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 cursor-default' 
-                    : 'bg-slate-800 hover:bg-slate-700 text-cyan-400 border-cyan-500/30 active:scale-95'
-                  }`}
-                >
-                  <Play size={18} className={isCurrentWeekOpen ? '' : 'group-hover:translate-x-1 transition-transform'} />
-                  {isCurrentWeekOpen ? 'INSCRIÇÕES ABERTAS (W' + currentWeek + ')' : 'ABRIR INSCRIÇÕES DA SEMANA'}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl space-y-6 shadow-xl">
-            <h3 className="text-xl font-bold flex items-center gap-2">
-              <ImageIcon size={20} className="text-slate-500" />
-              Personalização de Interface
-            </h3>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm text-slate-400 font-mono">Asset de Autenticação (URL Imagem)</label>
-                <input
-                  type="text"
-                  value={settings.loginImageUrl || ''}
-                  onChange={(e) => onUpdateSettings({ ...settings, loginImageUrl: e.target.value })}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 focus:ring-2 focus:ring-cyan-500 outline-none text-xs font-mono"
-                />
-              </div>
-              {settings.loginImageUrl && (
-                <div className="rounded-xl overflow-hidden h-32 border border-slate-800 relative group">
-                  <div className="absolute inset-0 bg-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                    <span className="text-[10px] font-mono text-cyan-400 bg-slate-900/80 px-2 py-1 rounded">PREVIEW_MODE</span>
-                  </div>
-                  <img src={settings.loginImageUrl} alt="Preview" className="w-full h-full object-cover" />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'export' && (
         <div className="space-y-8 animate-in fade-in slide-in-from-left-2">
           <div className="grid md:grid-cols-2 gap-8">
-            {/* Relatório Semanal */}
-            <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl text-center shadow-xl relative overflow-hidden group">
-              <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_70%)] from-cyan-500"></div>
-              <div className="w-16 h-16 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-400 mx-auto mb-6 border border-cyan-500/20 group-hover:scale-110 transition-transform">
-                <ClipboardList size={32} />
-              </div>
-              <h3 className="text-xl font-bold mb-2 font-mono">Relatório Semanal</h3>
-              <p className="text-slate-400 max-w-xs mx-auto mb-8 text-sm">
-                Registos da semana corrente (W{currentWeek}). Ideal para a equipa operacional.
-              </p>
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => exportToExcel(weeklyRegistrations, `lavagens-semana-${currentWeek}`)}
-                  className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-3 uppercase tracking-widest font-mono text-xs"
-                >
-                  <FileSpreadsheet size={18} />
-                  Exportar Excel (.XLSX)
-                </button>
-                <button
-                  onClick={() => exportToCSV(weeklyRegistrations, `lavagens-semana-${currentWeek}`)}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 px-6 rounded-xl border border-slate-700 transition-all flex items-center justify-center gap-3 uppercase tracking-widest font-mono text-xs"
-                >
-                  <FileText size={18} />
-                  Exportar CSV (.CSV)
-                </button>
+            <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl space-y-6 shadow-xl">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <Settings size={20} className="text-slate-500" />
+                Parâmetros do Sistema
+              </h3>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm text-slate-400 font-mono">Capacidade Semanal (Vagas)</label>
+                  <input
+                    type="number"
+                    value={settings.weeklyCapacity}
+                    onChange={(e) => onUpdateSettings({ ...settings, weeklyCapacity: parseInt(e.target.value) || 0 })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 focus:ring-2 focus:ring-cyan-500 outline-none transition-all font-mono"
+                  />
+                </div>
+
+                <div className="pt-4 border-t border-slate-800">
+                  <h4 className="font-bold mb-2 flex items-center gap-2">
+                    <ShieldAlert size={16} className="text-amber-500" />
+                    Controlo de Janela de Inscrição
+                  </h4>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Manual Ops: As inscrições são abertas exclusivamente por ação direta da administração.
+                  </p>
+                  <button
+                    onClick={handleManualOpen}
+                    disabled={isCurrentWeekOpen}
+                    className={`w-full py-3 rounded-xl border flex items-center justify-center gap-2 font-bold transition-all group ${
+                      isCurrentWeekOpen 
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 cursor-default' 
+                      : 'bg-slate-800 hover:bg-slate-700 text-cyan-400 border-cyan-500/30 active:scale-95'
+                    }`}
+                  >
+                    <Play size={18} className={isCurrentWeekOpen ? '' : 'group-hover:translate-x-1 transition-transform'} />
+                    {isCurrentWeekOpen ? 'INSCRIÇÕES ABERTAS (W' + currentWeek + ')' : 'ABRIR INSCRIÇÕES DA SEMANA'}
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Histórico Completo */}
-            <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl text-center shadow-xl relative overflow-hidden group">
-              <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_70%)] from-emerald-500"></div>
-              <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 mx-auto mb-6 border border-emerald-500/20 group-hover:scale-110 transition-transform">
-                <RefreshCcw size={32} />
-              </div>
-              <h3 className="text-xl font-bold mb-2 font-mono">Histórico Global</h3>
-              <p className="text-slate-400 max-w-xs mx-auto mb-8 text-sm">
-                Todos os registos desde o início do serviço. Ideal para auditoria e métricas.
-              </p>
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => exportToExcel(registrations, `historico-lavagens-completo`)}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-3 uppercase tracking-widest font-mono text-xs"
-                >
-                  <FileSpreadsheet size={18} />
-                  Exportar Histórico (.XLSX)
-                </button>
-                <button
-                  onClick={() => exportToCSV(registrations, `historico-lavagens-completo`)}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 px-6 rounded-xl border border-slate-700 transition-all flex items-center justify-center gap-3 uppercase tracking-widest font-mono text-xs"
-                >
-                  <FileText size={18} />
-                  Exportar Histórico (.CSV)
-                </button>
+            <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl space-y-6 shadow-xl">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <ImageIcon size={20} className="text-slate-500" />
+                Personalização de Interface
+              </h3>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm text-slate-400 font-mono">Asset de Autenticação (URL Imagem)</label>
+                  <input
+                    type="text"
+                    value={settings.loginImageUrl || ''}
+                    onChange={(e) => onUpdateSettings({ ...settings, loginImageUrl: e.target.value })}
+                    placeholder="https://images.unsplash.com/..."
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 focus:ring-2 focus:ring-cyan-500 outline-none text-xs font-mono"
+                  />
+                </div>
+                {settings.loginImageUrl && (
+                  <div className="rounded-xl overflow-hidden h-32 border border-slate-800 relative group">
+                    <div className="absolute inset-0 bg-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                      <span className="text-[10px] font-mono text-cyan-400 bg-slate-900/80 px-2 py-1 rounded">PREVIEW_MODE</span>
+                    </div>
+                    <img src={settings.loginImageUrl} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="p-4 bg-slate-900/50 border border-dashed border-slate-800 rounded-2xl text-center">
-            <p className="text-[10px] text-slate-600 font-mono uppercase tracking-widest">
-              Terminal de Extração de Dados Ativo • Protocolo de Auditoria v2.1
-            </p>
+          {/* Seção de Exportação Histórica movida para aqui */}
+          <div className="bg-slate-900 border border-emerald-500/20 p-8 rounded-3xl shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden group">
+            <div className="absolute inset-0 pointer-events-none opacity-[0.02] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_70%)] from-emerald-500"></div>
+            <div className="flex items-center gap-5 relative z-10">
+              <div className="w-14 h-14 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20 group-hover:scale-105 transition-transform">
+                <RefreshCcw size={28} />
+              </div>
+              <div>
+                <h4 className="text-lg font-bold text-slate-200 font-mono">Histórico Global</h4>
+                <p className="text-sm text-slate-400">Todos os registos desde o início. Ideal para auditoria.</p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto relative z-10">
+              <button
+                onClick={() => exportToExcel(registrations, `historico-lavagens-completo`)}
+                className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 uppercase tracking-widest font-mono text-xs"
+              >
+                <FileSpreadsheet size={18} />
+                Excel (.XLSX)
+              </button>
+              <button
+                onClick={() => exportToCSV(registrations, `historico-lavagens-completo`)}
+                className="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 px-6 rounded-xl border border-slate-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest font-mono text-xs"
+              >
+                <FileText size={18} />
+                CSV
+              </button>
+            </div>
           </div>
         </div>
       )}

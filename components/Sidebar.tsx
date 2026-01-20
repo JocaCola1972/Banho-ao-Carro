@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   ClipboardList,
   Users,
-  Download,
   X
 } from 'lucide-react';
 import { User } from '../types';
@@ -33,9 +32,8 @@ const Sidebar: React.FC<SidebarProps> = ({ user, activePage, onPageChange, onLog
 
   const adminSubItems = [
     { id: 'admin-weekly', label: 'Registos da Semana', icon: ClipboardList },
-    { id: 'admin-users', label: 'Utilizadores', icon: Users },
     { id: 'admin-settings', label: 'Definições', icon: SettingsIcon },
-    { id: 'admin-export', label: 'Relatórios', icon: Download },
+    { id: 'admin-users', label: 'Utilizadores', icon: Users },
   ];
 
   return (
