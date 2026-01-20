@@ -11,7 +11,9 @@ import {
   MapPin, 
   Timer,
   Info,
-  Trash2
+  Trash2,
+  Building2,
+  ParkingCircle
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -24,7 +26,8 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, onRegister, onCancelRegistration }) => {
   const [selectedCarId, setSelectedCarId] = useState<string>(user.cars[0]?.id || '');
-  const [parkingSpot, setParkingSpot] = useState('');
+  const [locationType, setLocationType] = useState<'central' | 'panoramico' | null>(null);
+  const [locationDetail, setLocationDetail] = useState('');
   
   const now = new Date();
   const currentWeek = getWeekNumber(now);
@@ -48,9 +51,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
   const isFull = weeklyTotal >= settings.weeklyCapacity;
 
   const handleRegister = () => {
-    if (!selectedCarId) return;
+    if (!selectedCarId || !locationType || !locationDetail) return;
     const selectedCar = user.cars.find(c => c.id === selectedCarId);
     if (!selectedCar) return;
+
+    const fullLocation = locationType === 'central' 
+      ? `Central Office - Piso ${locationDetail}` 
+      : `Panorâmico - Lugar ${locationDetail}`;
 
     const newReg: Registration = {
       id: crypto.randomUUID(),
@@ -62,7 +69,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
       weekNumber: currentWeek,
       month: now.getMonth() + 1,
       year: now.getFullYear(),
-      parkingSpot: parkingSpot
+      parkingSpot: fullLocation
     };
 
     onRegister(newReg);
@@ -229,20 +236,54 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
               )}
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               <label className="text-xs font-medium text-slate-500 block font-mono uppercase tracking-widest">Localização (Onde está o carro?)</label>
-              <input
-                type="text"
-                placeholder="Ex: Lugar 102, Piso -2"
-                value={parkingSpot}
-                onChange={(e) => setParkingSpot(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 text-white focus:ring-2 focus:ring-cyan-500 outline-none transition-all placeholder:text-slate-600 text-sm"
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => setLocationType('central')}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${
+                    locationType === 'central'
+                      ? 'bg-cyan-500/10 border-cyan-500 text-cyan-400'
+                      : 'bg-slate-800/50 border-slate-700 text-slate-500 hover:border-slate-600'
+                  }`}
+                >
+                  <Building2 size={24} />
+                  <span className="text-xs font-bold uppercase">Central Office</span>
+                </button>
+                <button
+                  onClick={() => setLocationType('panoramico')}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${
+                    locationType === 'panoramico'
+                      ? 'bg-blue-500/10 border-blue-500 text-blue-400'
+                      : 'bg-slate-800/50 border-slate-700 text-slate-500 hover:border-slate-600'
+                  }`}
+                >
+                  <ParkingCircle size={24} />
+                  <span className="text-xs font-bold uppercase">Panorâmico</span>
+                </button>
+              </div>
+
+              {locationType && (
+                <div className="animate-in slide-in-from-top-2 flex flex-col md:flex-row items-end gap-4">
+                  <div className="flex-1 w-full space-y-2">
+                    <label className="text-[10px] font-mono text-slate-500 uppercase">
+                      {locationType === 'central' ? 'Andar do Edifício' : 'Número do Parque'}
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={locationType === 'central' ? "Ex: Piso 2" : "Ex: Lugar 45"}
+                      value={locationDetail}
+                      onChange={(e) => setLocationDetail(e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 text-white focus:ring-2 focus:ring-cyan-500 outline-none transition-all placeholder:text-slate-600 text-sm"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           <button
-            disabled={!selectedCarId || isFull}
+            disabled={!selectedCarId || isFull || !locationType || !locationDetail}
             onClick={handleRegister}
             className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-sm"
           >
