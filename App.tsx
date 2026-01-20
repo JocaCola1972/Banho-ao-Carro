@@ -119,7 +119,7 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-cyan-400 font-mono p-4">
         <Loader2 className="animate-spin mb-4" size={48} />
-        <p className="animate-pulse text-center">CARREGANDO SISTEMA SECURE CLOUD...</p>
+        <p className="animate-pulse text-center uppercase tracking-widest text-xs">A ligar aos servidores Cloud...</p>
       </div>
     );
   }
@@ -225,46 +225,46 @@ const App: React.FC = () => {
       
       <main className="flex-1 p-4 md:p-8 lg:ml-64 overflow-x-hidden z-10 w-full">
         <div className="max-w-6xl mx-auto">
-          <header className="mb-6 md:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800 pb-4 gap-4">
-            <div className="flex items-center gap-4 w-full sm:w-auto justify-between">
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => setIsMobileMenuOpen(true)}
-                  className="p-2 bg-slate-900 border border-slate-800 rounded-lg lg:hidden text-cyan-400 hover:bg-slate-800 transition-all"
-                >
-                  <Menu size={20} />
-                </button>
-                <div>
-                  <h1 className="text-xl md:text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 font-mono leading-tight">
-                    Vai Dar Banho ao Carro
-                  </h1>
-                  <p className="text-slate-500 font-mono text-[9px] md:text-xs uppercase tracking-widest mt-0.5">
-                    Cloud Ops v2.5.0
-                  </p>
-                </div>
+          <header className="mb-6 md:mb-8 flex items-center justify-between border-b border-slate-800 pb-4 gap-2">
+            <div className="flex items-center gap-2 md:gap-3 overflow-hidden">
+              <button 
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="p-2 bg-slate-900 border border-slate-800 rounded-lg lg:hidden text-cyan-400 hover:bg-slate-800 transition-all shrink-0"
+              >
+                <Menu size={20} />
+              </button>
+              <div className="min-w-0">
+                <h1 className="text-base md:text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 font-mono leading-tight truncate">
+                  Vai Dar Banho ao Carro
+                </h1>
+                <p className="text-slate-500 font-mono text-[7px] md:text-xs uppercase tracking-widest mt-0.5 truncate">
+                  Cloud Ops v2.5.0
+                </p>
               </div>
             </div>
             
-            <div className="hidden sm:flex items-center gap-3">
-              <div className="flex flex-col items-end mr-2">
-                <div className="flex items-center gap-1 text-emerald-400 text-[10px] font-mono uppercase tracking-tighter">
-                  <div className={`w-2 h-2 rounded-full bg-emerald-400 ${isSyncing ? 'animate-ping' : ''}`}></div>
-                  {isSyncing ? 'Syncing...' : 'Synced'}
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-col items-end mr-1">
+                <div className="flex items-center gap-1 text-emerald-400 text-[8px] md:text-[10px] font-mono uppercase tracking-tighter">
+                  <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-400 ${isSyncing ? 'animate-ping' : ''}`}></div>
+                  <span className="hidden sm:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizado'}</span>
+                  <span className="sm:hidden">{isSyncing ? '...' : 'ON'}</span>
                 </div>
-                <div className="text-[9px] text-slate-600 font-mono">Last: {lastSync}</div>
+                <div className="text-[7px] md:text-[9px] text-slate-600 font-mono hidden sm:block truncate">Última: {lastSync}</div>
               </div>
 
               <button
                 onClick={() => fetchData(true)}
                 disabled={isSyncing}
-                className={`p-2 rounded-xl border transition-all flex items-center gap-2 group ${
+                className={`p-2 md:p-2.5 rounded-xl border transition-all flex items-center gap-2 group ${
                   isSyncing 
                   ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400 cursor-wait' 
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-cyan-500/50 hover:text-cyan-400'
+                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-cyan-500/50 hover:text-cyan-400 shadow-lg shadow-cyan-500/5'
                 }`}
+                title="Sincronizar Cloud"
               >
                 <RefreshCw size={18} className={`${isSyncing ? 'animate-spin' : ''}`} />
-                <span className="text-xs font-bold font-mono hidden md:inline">SYNC CLOUD</span>
+                <span className="text-[10px] font-bold font-mono hidden md:inline">SYNC CLOUD</span>
               </button>
             </div>
           </header>
