@@ -17,7 +17,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import Profile from './pages/Profile';
 import History from './pages/History';
 import Sidebar from './components/Sidebar';
-import { Shield, Cloud, Lock, Loader2, RefreshCw } from 'lucide-react';
+import { Shield, Cloud, Lock, Loader2, RefreshCw, Menu, X } from 'lucide-react';
 
 const App: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -27,6 +27,7 @@ const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<string>('dashboard');
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [lastSync, setLastSync] = useState<string>(new Date().toLocaleTimeString());
 
   const fetchData = async (manual = false) => {
@@ -61,6 +62,7 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setAuth({ user: null, isAuthenticated: false });
     setCurrentPage('login');
+    setIsMobileMenuOpen(false);
   };
 
   const updateUsers = async (newUsers: User[]) => {
@@ -108,11 +110,16 @@ const App: React.FC = () => {
     }
   };
 
+  const handlePageChange = (page: string) => {
+    setCurrentPage(page);
+    setIsMobileMenuOpen(false);
+  };
+
   if (loading || !settings) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-cyan-400 font-mono">
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-cyan-400 font-mono p-4">
         <Loader2 className="animate-spin mb-4" size={48} />
-        <p className="animate-pulse">CARREGANDO SISTEMA SECURE CLOUD...</p>
+        <p className="animate-pulse text-center">CARREGANDO SISTEMA SECURE CLOUD...</p>
       </div>
     );
   }
@@ -182,35 +189,79 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-slate-950 text-slate-200 cyber-grid relative overflow-hidden">
-      {/* Background Decorations */}
-      <div className="absolute top-0 right-0 p-10 opacity-10 pointer-events-none">
+    <div className="min-h-screen flex bg-slate-950 text-slate-200 cyber-grid relative overflow-x-hidden">
+      {/* Background Decorations - Hidden on small mobile to save perf */}
+      <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none hidden md:block">
         <Cloud size={300} className="animate-pulse" />
       </div>
-      <div className="absolute bottom-0 left-0 p-10 opacity-10 pointer-events-none">
+      <div className="absolute bottom-0 left-0 p-10 opacity-5 pointer-events-none hidden md:block">
         <Shield size={200} className="animate-float" />
       </div>
 
+      {/* Desktop Sidebar */}
       <Sidebar 
         user={auth.user!} 
         activePage={currentPage} 
-        onPageChange={setCurrentPage} 
+        onPageChange={handlePageChange} 
         onLogout={handleLogout} 
+        className="hidden lg:flex"
       />
+
+      {/* Mobile Menu Drawer Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[60] lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Mobile Sidebar */}
+      <div className={`fixed inset-y-0 left-0 w-64 z-[70] transition-transform duration-300 lg:hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <Sidebar 
+          user={auth.user!} 
+          activePage={currentPage} 
+          onPageChange={handlePageChange} 
+          onLogout={handleLogout} 
+          isMobile
+        />
+      </div>
       
-      <main className="flex-1 p-4 md:p-8 lg:ml-64 overflow-auto z-10">
+      <main className="flex-1 p-4 md:p-8 lg:ml-64 overflow-x-hidden z-10 w-full">
         <div className="max-w-6xl mx-auto">
-          <header className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800 pb-4 gap-4">
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 font-mono">
-                Vai Dar Banho ao Carro
-              </h1>
-              <p className="text-slate-500 font-mono text-xs uppercase tracking-widest mt-1">
-                Protocolo de Higienização Automóvel v2.5.0 - Cloud Connected
-              </p>
+          <header className="mb-6 md:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800 pb-4 gap-4">
+            <div className="flex items-center gap-4 w-full sm:w-auto justify-between">
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setIsMobileMenuOpen(true)}
+                  className="p-2 bg-slate-900 border border-slate-800 rounded-lg lg:hidden text-cyan-400 hover:bg-slate-800 transition-all"
+                >
+                  <Menu size={20} />
+                </button>
+                <div>
+                  <h1 className="text-xl md:text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 font-mono leading-tight">
+                    Vai Dar Banho ao Carro
+                  </h1>
+                  <p className="text-slate-500 font-mono text-[9px] md:text-xs uppercase tracking-widest mt-0.5">
+                    Cloud Ops v2.5.0
+                  </p>
+                </div>
+              </div>
+              
+              {/* Mobile Sync Status */}
+              <div className="sm:hidden flex flex-col items-end">
+                <button
+                  onClick={() => fetchData(true)}
+                  disabled={isSyncing}
+                  className={`p-1.5 rounded-lg border transition-all ${
+                    isSyncing ? 'text-cyan-400 border-cyan-500/50 animate-pulse' : 'text-slate-500 border-slate-800'
+                  }`}
+                >
+                  <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
+                </button>
+              </div>
             </div>
             
-            <div className="flex items-center gap-3 self-end sm:self-auto">
+            <div className="hidden sm:flex items-center gap-3 self-end sm:self-auto">
               <div className="flex flex-col items-end mr-2">
                 <div className="flex items-center gap-1 text-emerald-400 text-[10px] font-mono uppercase tracking-tighter">
                   <div className={`w-2 h-2 rounded-full bg-emerald-400 ${isSyncing ? 'animate-ping' : ''}`}></div>
@@ -239,7 +290,7 @@ const App: React.FC = () => {
             </div>
           </header>
 
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
             {renderPage()}
           </div>
         </div>
