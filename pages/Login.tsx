@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { User, AppSettings } from '../types';
-import { Shield, Key, Mail, Terminal, Loader2 } from 'lucide-react';
+import { Shield, Key, Mail, Terminal, Loader2, AlertTriangle } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
 interface LoginProps {
@@ -22,22 +22,31 @@ const Login: React.FC<LoginProps> = ({ onLogin, settings }) => {
     setError('');
 
     try {
+      // Tentativa de buscar o utilizador
       const { data, error: fetchError } = await supabase
         .from('users')
         .select('*')
         .eq('email', email)
         .maybeSingle();
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        // Se houver erro na query (ex: tabela não existe)
+        throw new Error(fetchError.message);
+      }
 
       if (data && (data.password || '123') === password) {
         onLogin(data);
       } else {
-        setError('Credenciais inválidas. Tente novamente.');
+        setError('Credenciais inválidas. Verifique o e-mail e a password.');
       }
-    } catch (err) {
-      console.error(err);
-      setError('Erro ao conectar ao servidor. Verifique a sua ligação.');
+    } catch (err: any) {
+      console.error("Erro de Autenticação:", err);
+      // Mensagem amigável com detalhe técnico para debug
+      if (err.message?.includes('relation "users" does not exist')) {
+        setError('Erro Crítico: A tabela "users" não foi encontrada no Supabase. Por favor, execute o script SQL de configuração.');
+      } else {
+        setError(`Erro de Ligação: ${err.message || 'Verifique a sua ligação à internet ou configurações do Supabase.'}`);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -45,7 +54,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, settings }) => {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
-      {/* Left Side: Visual/Branding */}
       <div 
         className="hidden lg:block relative bg-cover bg-center"
         style={{ backgroundImage: `url(${settings.loginImageUrl})` }}
@@ -64,36 +72,26 @@ const Login: React.FC<LoginProps> = ({ onLogin, settings }) => {
           <div className="mt-12 space-y-4 w-full max-w-sm text-left font-mono text-xs text-cyan-500/60 bg-black/40 p-6 rounded-lg border border-cyan-500/20">
             <div className="flex items-center gap-2">
               <Terminal size={14} />
-              <span>Initializing secure protocol... [OK]</span>
+              <span>Protocol: {window.location.protocol} [SECURE]</span>
             </div>
             <div className="flex items-center gap-2">
               <Terminal size={14} />
-              <span>Verifying wash slots... [OK]</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Terminal size={14} />
-              <span>Awaiting user authentication...</span>
+              <span>Database Status: Checking...</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Right Side: Form */}
       <div className="flex flex-col items-center justify-center p-8 bg-slate-950 cyber-grid">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center lg:text-left">
-            <div className="lg:hidden flex justify-center mb-6">
-              <div className="p-4 bg-cyan-500/10 rounded-2xl text-cyan-400">
-                <Shield size={40} />
-              </div>
-            </div>
-            <h2 className="text-3xl font-bold text-white mb-2">Login Seguro</h2>
-            <p className="text-slate-400">Insira as suas credenciais para aceder ao portal</p>
+            <h2 className="text-3xl font-bold text-white mb-2 font-mono uppercase tracking-tight">Login Sistema</h2>
+            <p className="text-slate-400">Autenticação obrigatória para acesso à Cloud</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300 block font-mono">Utilizador (E-mail)</label>
+              <label className="text-sm font-medium text-slate-300 block font-mono">E-mail Corporativo</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                 <input
@@ -101,14 +99,14 @@ const Login: React.FC<LoginProps> = ({ onLogin, settings }) => {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="exemplo@empresa.pt"
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition-all placeholder:text-slate-600"
+                  placeholder="admin@vaidarbanho.pt"
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-white focus:ring-2 focus:ring-cyan-500 outline-none transition-all"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300 block font-mono">Password</label>
+              <label className="text-sm font-medium text-slate-300 block font-mono">Password de Acesso</label>
               <div className="relative">
                 <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                 <input
@@ -117,31 +115,25 @@ const Login: React.FC<LoginProps> = ({ onLogin, settings }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition-all placeholder:text-slate-600"
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-white focus:ring-2 focus:ring-cyan-500 outline-none transition-all"
                 />
               </div>
             </div>
 
             {error && (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm animate-in fade-in zoom-in duration-300">
-                {error}
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs animate-in fade-in zoom-in duration-300 flex gap-3">
+                <AlertTriangle size={18} className="shrink-0" />
+                <span>{error}</span>
               </div>
             )}
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-lg shadow-cyan-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+              className="w-full bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2 uppercase tracking-widest font-mono"
             >
-              {isLoading && <Loader2 className="animate-spin" size={20} />}
-              {isLoading ? 'A VERIFICAR...' : 'AUTENTICAR SISTEMA'}
+              {isLoading ? <Loader2 className="animate-spin" size={20} /> : 'Iniciar Protocolo'}
             </button>
-
-            <div className="pt-4 text-center">
-              <p className="text-xs text-slate-500 font-mono">
-                Dica: A password por defeito é "123"
-              </p>
-            </div>
           </form>
         </div>
       </div>

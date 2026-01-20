@@ -21,22 +21,19 @@ const DEFAULT_SETTINGS: AppSettings = {
 };
 
 export const getStoredUsers = async (): Promise<User[]> => {
-  const { data, error } = await supabase
-    .from('users')
-    .select('*');
-  
-  if (error || !data || data.length === 0) {
-    // If no users, ensure admin exists (Optional: can be handled by initial migration)
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*');
+    
+    if (error || !data || data.length === 0) {
+      return [DEFAULT_ADMIN];
+    }
+    return data;
+  } catch (e) {
+    console.error("Erro ao carregar utilizadores:", e);
     return [DEFAULT_ADMIN];
   }
-  return data;
-};
-
-export const saveUser = async (user: User) => {
-  const { error } = await supabase
-    .from('users')
-    .upsert(user);
-  if (error) throw error;
 };
 
 export const saveUsers = async (users: User[]) => {
@@ -47,19 +44,15 @@ export const saveUsers = async (users: User[]) => {
 };
 
 export const getStoredRegistrations = async (): Promise<Registration[]> => {
-  const { data, error } = await supabase
-    .from('registrations')
-    .select('*');
-  
-  if (error) return [];
-  return data;
-};
-
-export const saveRegistration = async (reg: Registration) => {
-  const { error } = await supabase
-    .from('registrations')
-    .insert(reg);
-  if (error) throw error;
+  try {
+    const { data, error } = await supabase
+      .from('registrations')
+      .select('*');
+    if (error) return [];
+    return data;
+  } catch (e) {
+    return [];
+  }
 };
 
 export const saveRegistrations = async (regs: Registration[]) => {
@@ -70,19 +63,23 @@ export const saveRegistrations = async (regs: Registration[]) => {
 };
 
 export const getStoredSettings = async (): Promise<AppSettings> => {
-  const { data, error } = await supabase
-    .from('settings')
-    .select('*')
-    .single();
-  
-  if (error || !data) {
+  try {
+    const { data, error } = await supabase
+      .from('settings')
+      .select('*')
+      .limit(1)
+      .maybeSingle();
+    
+    if (error || !data) {
+      return DEFAULT_SETTINGS;
+    }
+    return data;
+  } catch (e) {
     return DEFAULT_SETTINGS;
   }
-  return data;
 };
 
 export const saveSettings = async (settings: AppSettings) => {
-  // Assuming a single row in settings table
   const { error } = await supabase
     .from('settings')
     .upsert({ id: 1, ...settings });
