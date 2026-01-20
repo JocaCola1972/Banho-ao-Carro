@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Registration, AppSettings, Car } from '../types';
 import { areRegistrationsOpen, getWeekNumber, getMonthYearString } from '../utils';
 import { 
@@ -13,7 +13,10 @@ import {
   Info,
   Trash2,
   Building2,
-  ParkingCircle
+  ParkingCircle,
+  Edit,
+  Save,
+  X
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -21,13 +24,15 @@ interface DashboardProps {
   registrations: Registration[];
   settings: AppSettings;
   onRegister: (reg: Registration) => void;
+  onUpdateRegistration: (reg: Registration) => void;
   onCancelRegistration: (regId: string) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, onRegister, onCancelRegistration }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, onRegister, onUpdateRegistration, onCancelRegistration }) => {
   const [selectedCarId, setSelectedCarId] = useState<string>(user.cars[0]?.id || '');
   const [locationType, setLocationType] = useState<'central' | 'panoramico' | null>(null);
   const [locationDetail, setLocationDetail] = useState('');
+  const [isEditingLocation, setIsEditingLocation] = useState(false);
   
   const now = new Date();
   const currentWeek = getWeekNumber(now);
@@ -51,13 +56,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
   const isFull = weeklyTotal >= settings.weeklyCapacity;
 
   const handleRegister = () => {
-    if (!selectedCarId || !locationType || !locationDetail) return;
+    if (!selectedCarId || !locationType) return;
     const selectedCar = user.cars.find(c => c.id === selectedCarId);
     if (!selectedCar) return;
 
+    const detailText = locationDetail.trim() 
+      ? (locationType === 'central' ? ` - Piso ${locationDetail}` : ` - Lugar ${locationDetail}`)
+      : ' (Detalhes por definir)';
+
     const fullLocation = locationType === 'central' 
-      ? `Central Office - Piso ${locationDetail}` 
-      : `Panorâmico - Lugar ${locationDetail}`;
+      ? `Central Office${detailText}` 
+      : `Panorâmico${detailText}`;
 
     const newReg: Registration = {
       id: crypto.randomUUID(),
@@ -75,6 +84,38 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
     onRegister(newReg);
   };
 
+  const handleUpdateLocation = () => {
+    if (!userRegistrationThisWeek || !locationType) return;
+    
+    const detailText = locationDetail.trim() 
+      ? (locationType === 'central' ? ` - Piso ${locationDetail}` : ` - Lugar ${locationDetail}`)
+      : ' (Detalhes por definir)';
+
+    const fullLocation = locationType === 'central' 
+      ? `Central Office${detailText}` 
+      : `Panorâmico${detailText}`;
+
+    onUpdateRegistration({
+      ...userRegistrationThisWeek,
+      parkingSpot: fullLocation
+    });
+    setIsEditingLocation(false);
+  };
+
+  const startEditing = () => {
+    const spot = userRegistrationThisWeek?.parkingSpot || '';
+    if (spot.includes('Central Office')) {
+      setLocationType('central');
+      const detail = spot.replace('Central Office - Piso ', '').replace('Central Office (Detalhes por definir)', '');
+      setLocationDetail(detail);
+    } else if (spot.includes('Panorâmico')) {
+      setLocationType('panoramico');
+      const detail = spot.replace('Panorâmico - Lugar ', '').replace('Panorâmico (Detalhes por definir)', '');
+      setLocationDetail(detail);
+    }
+    setIsEditingLocation(true);
+  };
+
   const handleCancel = () => {
     if (userRegistrationThisWeek && confirm('Tem a certeza que deseja cancelar a sua inscrição de lavagem para esta semana?')) {
       onCancelRegistration(userRegistrationThisWeek.id);
@@ -86,15 +127,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
     return (
       <div className="space-y-6">
         <div className="bg-emerald-500/10 border border-emerald-500/20 p-6 md:p-8 rounded-3xl text-center flex flex-col items-center relative overflow-hidden">
-          <div className="absolute top-2 right-2 md:top-4 md:right-4">
-            <button
-              onClick={handleCancel}
-              className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-all flex items-center gap-2 text-[10px] md:text-xs font-bold border border-transparent hover:border-red-500/20"
-              title="Cancelar Inscrição"
-            >
-              <Trash2 size={16} />
-              <span className="hidden sm:inline">CANCELAR INSCRIÇÃO</span>
-            </button>
+          <div className="absolute top-2 right-2 md:top-4 md:right-4 flex gap-2">
+            {!isEditingLocation && (
+              <button
+                onClick={handleCancel}
+                className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-all flex items-center gap-2 text-[10px] md:text-xs font-bold border border-transparent hover:border-red-500/20"
+                title="Cancelar Inscrição"
+              >
+                <Trash2 size={16} />
+                <span className="hidden sm:inline">CANCELAR</span>
+              </button>
+            )}
           </div>
           <CheckCircle2 size={48} className="text-emerald-400 mb-4 animate-bounce md:w-16 md:h-16" />
           <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Lavagem Agendada!</h2>
@@ -113,13 +156,55 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
               <p className="text-xs md:text-sm text-slate-400">No dia da lavagem, deve deixar a chave na receção do edifício.</p>
             </div>
           </div>
-          <div className="bg-slate-900/50 border border-slate-800 p-5 md:p-6 rounded-2xl flex gap-4 items-start">
-            <div className="p-3 bg-amber-500/10 rounded-xl text-amber-400 shrink-0">
-              <MapPin size={24} />
-            </div>
-            <div>
-              <h3 className="font-bold text-white mb-1">Localização</h3>
-              <p className="text-xs md:text-sm text-slate-400">O seu carro deve estar estacionado no lugar indicado: <span className="text-amber-400 font-mono font-bold">{userRegistrationThisWeek.parkingSpot || 'Não especificado'}</span></p>
+          <div className="bg-slate-900/50 border border-slate-800 p-5 md:p-6 rounded-2xl flex flex-col gap-4 relative overflow-hidden group">
+            <div className="flex gap-4 items-start">
+              <div className="p-3 bg-amber-500/10 rounded-xl text-amber-400 shrink-0">
+                <MapPin size={24} />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="font-bold text-white">Localização</h3>
+                  {!isEditingLocation && (
+                    <button onClick={startEditing} className="text-cyan-400 hover:text-cyan-300 p-1 rounded-lg transition-colors">
+                      <Edit size={16} />
+                    </button>
+                  )}
+                </div>
+                
+                {!isEditingLocation ? (
+                  <p className="text-xs md:text-sm text-slate-400">
+                    O seu carro está em: <span className="text-amber-400 font-mono font-bold">{userRegistrationThisWeek.parkingSpot || 'Não especificado'}</span>
+                  </p>
+                ) : (
+                  <div className="space-y-4 pt-2 animate-in fade-in slide-in-from-top-1">
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setLocationType('central')}
+                        className={`text-[10px] font-bold py-2 px-3 rounded-lg border transition-all ${locationType === 'central' ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400' : 'bg-slate-800 border-slate-700 text-slate-500'}`}
+                      >
+                        CENTRAL
+                      </button>
+                      <button
+                        onClick={() => setLocationType('panoramico')}
+                        className={`text-[10px] font-bold py-2 px-3 rounded-lg border transition-all ${locationType === 'panoramico' ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-slate-800 border-slate-700 text-slate-500'}`}
+                      >
+                        PANORÂMICO
+                      </button>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder={locationType === 'central' ? "Piso" : "Lugar"}
+                        value={locationDetail}
+                        onChange={(e) => setLocationDetail(e.target.value)}
+                        className="flex-1 bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white outline-none focus:border-cyan-500"
+                      />
+                      <button onClick={handleUpdateLocation} className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-500"><Save size={16}/></button>
+                      <button onClick={() => setIsEditingLocation(false)} className="bg-slate-800 text-slate-400 p-2 rounded-lg hover:bg-slate-700"><X size={16}/></button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -267,7 +352,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
                 <div className="animate-in slide-in-from-top-2 flex flex-col md:flex-row items-end gap-4">
                   <div className="flex-1 w-full space-y-2">
                     <label className="text-[10px] font-mono text-slate-500 uppercase">
-                      {locationType === 'central' ? 'Andar do Edifício' : 'Número do Parque'}
+                      {locationType === 'central' ? 'Andar do Edifício (Opcional)' : 'Número do Parque (Opcional)'}
                     </label>
                     <input
                       type="text"
@@ -283,7 +368,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, registrations, settings, on
           </div>
 
           <button
-            disabled={!selectedCarId || isFull || !locationType || !locationDetail}
+            disabled={!selectedCarId || isFull || !locationType}
             onClick={handleRegister}
             className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-sm"
           >

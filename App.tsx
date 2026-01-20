@@ -92,6 +92,11 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUpdateRegistration = async (updatedReg: Registration) => {
+    const newRegs = registrations.map(r => r.id === updatedReg.id ? updatedReg : r);
+    await updateRegistrations(newRegs);
+  };
+
   const removeRegistration = async (regId: string) => {
     try {
       await deleteRegistration(regId);
@@ -162,6 +167,7 @@ const App: React.FC = () => {
             registrations={registrations} 
             settings={settings} 
             onRegister={(reg) => updateRegistrations([...registrations, reg])} 
+            onUpdateRegistration={handleUpdateRegistration}
             onCancelRegistration={removeRegistration}
           />
         );
@@ -184,7 +190,7 @@ const App: React.FC = () => {
           />
         );
       default:
-        return <Dashboard user={auth.user!} registrations={registrations} settings={settings} onRegister={(reg) => updateRegistrations([...registrations, reg])} onCancelRegistration={removeRegistration} />;
+        return <Dashboard user={auth.user!} registrations={registrations} settings={settings} onRegister={(reg) => updateRegistrations([...registrations, reg])} onUpdateRegistration={handleUpdateRegistration} onCancelRegistration={removeRegistration} />;
     }
   };
 
