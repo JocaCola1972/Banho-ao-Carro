@@ -134,7 +134,8 @@ const App: React.FC = () => {
     if (isAdminPage) {
       if (auth.user?.role !== 'admin') return <div className="p-8 text-center text-red-500 font-bold">ACESSO NEGADO: PROTOCOLO DE SEGURANÇA ATIVADO</div>;
       
-      let initialTab: 'weekly' | 'users' | 'settings' = 'weekly';
+      let initialTab: 'general' | 'weekly' | 'users' | 'settings' = 'general';
+      if (currentPage === 'admin-weekly') initialTab = 'weekly';
       if (currentPage === 'admin-users') initialTab = 'users';
       if (currentPage === 'admin-settings') initialTab = 'settings';
 
@@ -189,7 +190,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex bg-slate-950 text-slate-200 cyber-grid relative overflow-x-hidden">
-      {/* Background Decorations - Hidden on small mobile to save perf */}
+      {/* Background Decorations */}
       <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none hidden md:block">
         <Cloud size={300} className="animate-pulse" />
       </div>
@@ -197,7 +198,6 @@ const App: React.FC = () => {
         <Shield size={200} className="animate-float" />
       </div>
 
-      {/* Desktop Sidebar */}
       <Sidebar 
         user={auth.user!} 
         activePage={currentPage} 
@@ -206,7 +206,6 @@ const App: React.FC = () => {
         className="hidden lg:flex"
       />
 
-      {/* Mobile Menu Drawer Overlay */}
       {isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[60] lg:hidden"
@@ -214,7 +213,6 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* Mobile Sidebar */}
       <div className={`fixed inset-y-0 left-0 w-64 z-[70] transition-transform duration-300 lg:hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <Sidebar 
           user={auth.user!} 
@@ -245,22 +243,9 @@ const App: React.FC = () => {
                   </p>
                 </div>
               </div>
-              
-              {/* Mobile Sync Status */}
-              <div className="sm:hidden flex flex-col items-end">
-                <button
-                  onClick={() => fetchData(true)}
-                  disabled={isSyncing}
-                  className={`p-1.5 rounded-lg border transition-all ${
-                    isSyncing ? 'text-cyan-400 border-cyan-500/50 animate-pulse' : 'text-slate-500 border-slate-800'
-                  }`}
-                >
-                  <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
-                </button>
-              </div>
             </div>
             
-            <div className="hidden sm:flex items-center gap-3 self-end sm:self-auto">
+            <div className="hidden sm:flex items-center gap-3">
               <div className="flex flex-col items-end mr-2">
                 <div className="flex items-center gap-1 text-emerald-400 text-[10px] font-mono uppercase tracking-tighter">
                   <div className={`w-2 h-2 rounded-full bg-emerald-400 ${isSyncing ? 'animate-ping' : ''}`}></div>
@@ -275,17 +260,12 @@ const App: React.FC = () => {
                 className={`p-2 rounded-xl border transition-all flex items-center gap-2 group ${
                   isSyncing 
                   ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400 cursor-wait' 
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-cyan-500/50 hover:text-cyan-400 hover:shadow-lg hover:shadow-cyan-500/10'
+                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-cyan-500/50 hover:text-cyan-400'
                 }`}
-                title="Sincronizar com Cloud"
               >
-                <RefreshCw size={18} className={`${isSyncing ? 'animate-spin' : 'group-active:rotate-180 transition-transform duration-500'}`} />
+                <RefreshCw size={18} className={`${isSyncing ? 'animate-spin' : ''}`} />
                 <span className="text-xs font-bold font-mono hidden md:inline">SYNC CLOUD</span>
               </button>
-
-              <div className="hidden md:flex items-center gap-2 text-cyan-400/50">
-                <Lock size={14} />
-              </div>
             </div>
           </header>
 

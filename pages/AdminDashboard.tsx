@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, Registration, AppSettings } from '../types';
 import { getWeekNumber, areRegistrationsOpen } from '../utils';
@@ -22,7 +23,11 @@ import {
   FileText,
   PowerOff,
   Loader2,
-  Download
+  Download,
+  LayoutDashboard,
+  BarChart3,
+  ShieldAlert,
+  Activity
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -34,7 +39,7 @@ interface AdminDashboardProps {
   onUpdateRegistrations: (regs: Registration[]) => void;
   onRemoveRegistration: (regId: string) => void;
   onUpdateSettings: (settings: AppSettings) => void;
-  forcedTab?: 'weekly' | 'users' | 'settings';
+  forcedTab?: 'general' | 'weekly' | 'users' | 'settings';
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
@@ -48,11 +53,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onUpdateSettings,
   forcedTab
 }) => {
-  const [activeTab, setActiveTab] = useState<'weekly' | 'users' | 'settings'>(forcedTab || 'weekly');
+  const [activeTab, setActiveTab] = useState<'general' | 'weekly' | 'users' | 'settings'>(forcedTab || 'general');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
+  // Sincroniza o separador ativo com a navegação da Sidebar
   useEffect(() => {
     if (forcedTab) {
       setActiveTab(forcedTab);
@@ -65,7 +71,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const weeklyRegistrations = registrations.filter(
     r => r.weekNumber === currentWeek && r.year === currentYear
-  ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  );
 
   const [formData, setFormData] = useState<Partial<User>>({
     firstName: '',
@@ -88,7 +94,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         manualCloseYear: null
       });
     } catch (err) {
-      console.error(err);
       alert('Erro ao ativar inscrições.');
     } finally {
       setIsProcessing(false);
@@ -107,7 +112,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         manualCloseYear: currentYear
       });
     } catch (err) {
-      console.error(err);
       alert('Erro ao desativar inscrições.');
     } finally {
       setIsProcessing(false);
@@ -116,13 +120,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const exportToExcel = (data: Registration[], fileName: string) => {
     const preparedData = data.map(r => ({
-      'Nome do Utilizador': r.userName,
+      'Utilizador': r.userName,
       'Veículo': r.carDetails,
-      'Data de Inscrição': new Date(r.date).toLocaleDateString('pt-PT'),
-      'Hora': new Date(r.date).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
+      'Data': new Date(r.date).toLocaleDateString('pt-PT'),
       'Semana': r.weekNumber,
-      'Mês': r.month,
-      'Ano': r.year,
       'Lugar': r.parkingSpot || 'N/A'
     }));
     const ws = XLSX.utils.json_to_sheet(preparedData);
@@ -168,18 +169,74 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <span>Administração</span>
         <span>/</span>
         <span className="text-cyan-400">
+          {activeTab === 'general' && 'Visão Geral'}
           {activeTab === 'weekly' && 'Registos da Semana'}
           {activeTab === 'users' && 'Utilizadores'}
           {activeTab === 'settings' && 'Definições'}
         </span>
       </div>
 
+      {/* VIEW: GERAL (STATS) */}
+      {activeTab === 'general' && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-cyan-500/10 rounded-2xl text-cyan-400">
+                  <Users size={24} />
+                </div>
+                <span className="text-[10px] font-mono text-slate-500 uppercase">Total Cloud</span>
+              </div>
+              <div className="text-3xl font-black text-white">{users.length}</div>
+              <div className="text-xs text-slate-500 font-mono mt-1">Utilizadores Ativos</div>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-amber-500/10 rounded-2xl text-amber-400">
+                  <Activity size={24} />
+                </div>
+                <span className="text-[10px] font-mono text-slate-500 uppercase">Capacidade W{currentWeek}</span>
+              </div>
+              <div className="text-3xl font-black text-white">{weeklyRegistrations.length} / {settings.weeklyCapacity}</div>
+              <div className="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                <div 
+                  className="h-full bg-amber-500 transition-all duration-1000" 
+                  style={{ width: `${Math.min(100, (weeklyRegistrations.length / settings.weeklyCapacity) * 100)}%` }}
+                ></div>
+              </div>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className={`p-3 rounded-2xl ${isOpen ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                  {isOpen ? <Play size={24} /> : <PowerOff size={24} />}
+                </div>
+                <span className="text-[10px] font-mono text-slate-500 uppercase">Estado Porta</span>
+              </div>
+              <div className={`text-xl font-bold uppercase tracking-tighter ${isOpen ? 'text-emerald-400' : 'text-red-400'}`}>
+                {isOpen ? 'Inscrições Abertas' : 'Sistema Trancado'}
+              </div>
+              <div className="text-[10px] text-slate-600 font-mono mt-1">CONTROLO_MANUAL_ADMIN</div>
+            </div>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl flex items-center justify-center min-h-[200px] group">
+             <div className="text-center space-y-4">
+                <BarChart3 size={48} className="mx-auto text-slate-700 group-hover:text-cyan-500 transition-colors" />
+                <p className="text-slate-500 font-mono text-sm">Dashboard de Analytics em tempo real ativo.</p>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW: REGISTOS DA SEMANA */}
       {activeTab === 'weekly' && (
         <div className="space-y-6 animate-in fade-in slide-in-from-left-2">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <h3 className="text-xl font-bold flex items-center gap-2">
               <ClipboardList size={20} className="text-slate-500" />
-              Inscrições Semanais (W{currentWeek})
+              Janela Operacional W{currentWeek}
             </h3>
             
             <div className="flex flex-wrap items-center gap-3">
@@ -210,11 +267,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   Desativar
                 </button>
               </div>
-
-              <div className="text-[10px] font-mono text-cyan-500 bg-cyan-500/10 px-4 py-2.5 rounded-xl border border-cyan-500/20 flex items-center gap-2">
-                <span className={`w-1.5 h-1.5 rounded-full ${isOpen ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span>
-                {weeklyRegistrations.length} / {settings.weeklyCapacity} LUGARES
-              </div>
             </div>
           </div>
 
@@ -234,7 +286,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   {weeklyRegistrations.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="px-6 py-12 text-center text-slate-500 font-mono italic">
-                        Sem registos ativos para esta janela operacional.
+                        Nenhum registo para a semana {currentWeek}.
                       </td>
                     </tr>
                   ) : (
@@ -268,26 +320,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <FileSpreadsheet size={24} />
               </div>
               <div>
-                <h4 className="font-bold text-slate-200">Exportar Registos</h4>
-                <p className="text-xs text-slate-500 font-mono uppercase tracking-tight">W{currentWeek}_Report</p>
+                <h4 className="font-bold text-slate-200">Exportar Inscrições</h4>
+                <p className="text-xs text-slate-500 font-mono uppercase tracking-tight">Relatório_Semanal_W{currentWeek}</p>
               </div>
             </div>
-            <button onClick={() => exportToExcel(weeklyRegistrations, `lavagens-w${currentWeek}`)} className="bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/20 font-bold py-2.5 px-5 rounded-xl text-[10px] uppercase tracking-widest flex items-center gap-2">
-              <Download size={16} /> Exportar Excel
+            <button onClick={() => exportToExcel(weeklyRegistrations, `lavagens-w${currentWeek}`)} className="bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/20 font-bold py-2.5 px-5 rounded-xl text-[10px] uppercase tracking-widest flex items-center gap-2 transition-all">
+              <Download size={16} /> Descarregar Excel
             </button>
           </div>
         </div>
       )}
 
+      {/* VIEW: GESTÃO DE UTILIZADORES */}
       {activeTab === 'users' && (
         <div className="space-y-4 animate-in fade-in slide-in-from-left-2">
           <div className="flex justify-between items-center">
             <h3 className="text-xl font-bold flex items-center gap-2">
               <Users size={20} className="text-slate-500" />
-              Gestão de Utilizadores
+              Diretório de Utilizadores
             </h3>
-            <button onClick={() => openModal()} className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-cyan-500/20">
-              <UserPlus size={16} /> Novo Utilizador
+            <button onClick={() => openModal()} className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-cyan-500/20 transition-all">
+              <UserPlus size={16} /> Novo Agente
             </button>
           </div>
           <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
@@ -296,13 +349,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <tr className="bg-slate-800/50 text-slate-400 text-xs font-mono uppercase tracking-widest">
                   <th className="px-6 py-4">Utilizador</th>
                   <th className="px-6 py-4">E-mail</th>
-                  <th className="px-6 py-4">Nível</th>
-                  <th className="px-6 py-4 text-right">Ações</th>
+                  <th className="px-6 py-4">Nível de Acesso</th>
+                  <th className="px-6 py-4 text-right">Ações de Segurança</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {users.map(u => (
-                  <tr key={u.id} className="hover:bg-slate-800/20">
+                  <tr key={u.id} className="hover:bg-slate-800/20 transition-colors">
                     <td className="px-6 py-4 font-bold text-slate-200">{u.firstName} {u.lastName}</td>
                     <td className="px-6 py-4 text-sm font-mono text-cyan-500/80">{u.email}</td>
                     <td className="px-6 py-4">
@@ -311,9 +364,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right flex justify-end gap-1">
-                      <button onClick={() => handleResetPassword(u.id)} className="p-2 text-amber-500 hover:bg-amber-500/10 rounded-lg"><RefreshCcw size={16} /></button>
-                      <button onClick={() => openModal(u)} className="p-2 text-cyan-400 hover:bg-cyan-500/10 rounded-lg"><Edit3 size={16} /></button>
-                      {u.role !== 'admin' && <button onClick={() => onRemoveUser(u.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg"><Trash2 size={16} /></button>}
+                      <button title="Reset Password" onClick={() => handleResetPassword(u.id)} className="p-2 text-amber-500 hover:bg-amber-500/10 rounded-lg transition-colors"><RefreshCcw size={16} /></button>
+                      <button title="Editar" onClick={() => openModal(u)} className="p-2 text-cyan-400 hover:bg-cyan-500/10 rounded-lg transition-colors"><Edit3 size={16} /></button>
+                      {u.role !== 'admin' && <button title="Remover" onClick={() => onRemoveUser(u.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 size={16} /></button>}
                     </td>
                   </tr>
                 ))}
@@ -323,60 +376,64 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
+      {/* VIEW: DEFINIÇÕES DO SISTEMA */}
       {activeTab === 'settings' && (
         <div className="space-y-8 animate-in fade-in slide-in-from-left-2">
           <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl space-y-6">
-              <h3 className="text-xl font-bold flex items-center gap-2"><Settings size={20} /> Parâmetros</h3>
+            <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl space-y-6 shadow-xl">
+              <h3 className="text-xl font-bold flex items-center gap-2"><Settings size={20} className="text-slate-500" /> Parâmetros Operacionais</h3>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-xs text-slate-500 font-mono uppercase">Vagas Semanais</label>
-                  <input type="number" value={settings.weeklyCapacity} onChange={(e) => onUpdateSettings({ ...settings, weeklyCapacity: parseInt(e.target.value) || 0 })} className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 outline-none font-mono" />
+                  <label className="text-xs text-slate-500 font-mono uppercase tracking-widest">Quota de Vagas Semanais</label>
+                  <input type="number" value={settings.weeklyCapacity} onChange={(e) => onUpdateSettings({ ...settings, weeklyCapacity: parseInt(e.target.value) || 0 })} className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 outline-none font-mono focus:border-cyan-500 transition-colors" />
+                  <p className="text-[10px] text-slate-600 font-mono">Define o limite máximo de inscrições por janela temporal.</p>
                 </div>
               </div>
             </div>
-            <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl space-y-6">
-              <h3 className="text-xl font-bold flex items-center gap-2"><ImageIcon size={20} /> Aspeto</h3>
+            <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl space-y-6 shadow-xl">
+              <h3 className="text-xl font-bold flex items-center gap-2"><ImageIcon size={20} className="text-slate-500" /> Interface Visual</h3>
               <div className="space-y-2">
-                <label className="text-xs text-slate-500 font-mono uppercase">URL Imagem Login</label>
-                <input type="text" value={settings.loginImageUrl || ''} onChange={(e) => onUpdateSettings({ ...settings, loginImageUrl: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 outline-none text-xs font-mono" />
+                <label className="text-xs text-slate-500 font-mono uppercase tracking-widest">URL da Imagem de Background</label>
+                <input type="text" value={settings.loginImageUrl || ''} onChange={(e) => onUpdateSettings({ ...settings, loginImageUrl: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 outline-none text-xs font-mono focus:border-cyan-500 transition-colors" placeholder="https://..." />
+                <p className="text-[10px] text-slate-600 font-mono">Esta imagem será utilizada no ecrã de autenticação.</p>
               </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* MODAL DE UTILIZADOR */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-800/30">
-              <h4 className="text-xl font-bold italic uppercase tracking-tight">Ficha de Utilizador</h4>
+              <h4 className="text-xl font-bold italic uppercase tracking-tight">Protocolo de Identidade</h4>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-500 hover:text-white transition-colors"><X size={24} /></button>
             </div>
             <form onSubmit={handleSaveUser} className="p-8 space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] text-slate-500 uppercase font-mono">Nome</label>
-                  <input type="text" required value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2 px-4 text-sm outline-none focus:border-cyan-500" />
+                  <input type="text" required value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2.5 px-4 text-sm outline-none focus:border-cyan-500 transition-all" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] text-slate-500 uppercase font-mono">Apelido</label>
-                  <input type="text" required value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2 px-4 text-sm outline-none focus:border-cyan-500" />
+                  <input type="text" required value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2.5 px-4 text-sm outline-none focus:border-cyan-500 transition-all" />
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] text-slate-500 uppercase font-mono">E-mail</label>
-                <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2 px-4 text-sm outline-none focus:border-cyan-500 font-mono" />
+                <label className="text-[10px] text-slate-500 uppercase font-mono">ID de Acesso (E-mail)</label>
+                <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2.5 px-4 text-sm outline-none focus:border-cyan-500 font-mono transition-all" />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] text-slate-500 uppercase font-mono">Função</label>
-                <select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value as any })} className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2 px-4 text-sm outline-none focus:border-cyan-500">
-                  <option value="user">Utilizador</option>
-                  <option value="admin">Administrador</option>
+                <label className="text-[10px] text-slate-500 uppercase font-mono">Privilégios</label>
+                <select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value as any })} className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2.5 px-4 text-sm outline-none focus:border-cyan-500 transition-all">
+                  <option value="user">Utilizador Comum</option>
+                  <option value="admin">Administrador de Sistema</option>
                 </select>
               </div>
-              <button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-500 py-3 rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2">
-                <Save size={18} /> Guardar Dados
+              <button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-500 py-4 rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2">
+                <Save size={18} /> Validar e Guardar
               </button>
             </form>
           </div>
