@@ -11,17 +11,20 @@ export const getWeekNumber = (date: Date): number => {
 
 /**
  * Define se as inscrições estão abertas.
- * Com a abertura automática cancelada, apenas verifica se o admin 
- * ativou manualmente a janela para a semana atual.
+ * O sistema é estritamente manual: só abre se o manualOpenWeek coincidir com a semana atual.
  */
 export const areRegistrationsOpen = (settings: AppSettings): boolean => {
+  if (!settings) return false;
+  
   const now = new Date();
   const currentWeek = getWeekNumber(now);
   const currentYear = now.getFullYear();
 
-  // As inscrições só estão abertas se o administrador as ativou para ESTA semana específica.
-  // Se o admin desativar, o manualOpenWeek é limpo (null), logo retorna false.
-  return settings.manualOpenWeek === currentWeek && settings.manualOpenYear === currentYear;
+  // Verifica se o Administrador ativou explicitamente para esta semana e ano
+  return (
+    settings.manualOpenWeek === currentWeek && 
+    settings.manualOpenYear === currentYear
+  );
 };
 
 export const getMonthYearString = (date: Date): string => {

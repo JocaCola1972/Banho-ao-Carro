@@ -24,7 +24,8 @@ import {
   FileSpreadsheet,
   FileText,
   CheckCircle2,
-  PowerOff
+  PowerOff,
+  Loader2
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -53,6 +54,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'weekly' | 'users' | 'settings'>(forcedTab || 'weekly');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   useEffect(() => {
     if (forcedTab) {
@@ -64,12 +66,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const currentWeek = getWeekNumber(now);
   const currentYear = now.getFullYear();
 
-  // Filter registrations for the current week
   const weeklyRegistrations = registrations.filter(
     r => r.weekNumber === currentWeek && r.year === currentYear
   ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  // Form State
   const [formData, setFormData] = useState<Partial<User>>({
     firstName: '',
     lastName: '',
@@ -80,6 +80,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   });
 
   const handleManualOpen = async () => {
+    setIsProcessing(true);
     try {
       await onUpdateSettings({
         ...settings,
@@ -88,13 +89,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         manualCloseWeek: null,
         manualCloseYear: null
       });
-      alert('INSCRIÇÕES ATIVADAS: A janela de agendamento para a semana W' + currentWeek + ' está agora disponível para todos.');
     } catch (err) {
-      alert('ERRO: Falha ao comunicar com o servidor.');
+      alert('ERRO: Falha ao ativar inscrições.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleManualClose = async () => {
+    setIsProcessing(true);
     try {
       await onUpdateSettings({
         ...settings,
@@ -103,14 +106,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         manualCloseWeek: currentWeek,
         manualCloseYear: currentYear
       });
-      alert('INSCRIÇÕES DESATIVADAS: A janela de agendamento foi encerrada manualmente pela administração.');
     } catch (err) {
-      alert('ERRO: Falha ao comunicar com o servidor.');
+      alert('ERRO: Falha ao desativar inscrições.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const prepareExportData = (data: Registration[]) => {
-    return data.map(r => ({
+  const exportToExcel = (data: Registration[], fileName: string) => {
+    const preparedData = data.map(r => ({
       'Nome do Utilizador': r.userName,
       'Veículo': r.carDetails,
       'Data de Inscrição': new Date(r.date).toLocaleDateString('pt-PT'),
@@ -118,12 +122,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       'Semana': r.weekNumber,
       'Mês': r.month,
       'Ano': r.year,
-      'Lugar de Estacionamento': r.parkingSpot || 'N/A'
+      'Lugar': r.parkingSpot || 'N/A'
     }));
-  };
-
-  const exportToExcel = (data: Registration[], fileName: string) => {
-    const ws = XLSX.utils.json_to_sheet(prepareExportData(data));
+    const ws = XLSX.utils.json_to_sheet(preparedData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Registos");
     XLSX.writeFile(wb, `${fileName}.xlsx`);
@@ -134,23 +135,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     data.forEach(r => {
       csv += `"${r.userName}","${r.carDetails}","${new Date(r.date).toLocaleDateString()}","${r.parkingSpot || ''}"\n`;
     });
-
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.setAttribute('hidden', '');
-    a.setAttribute('href', url);
-    a.setAttribute('download', `${fileName}.csv`);
-    document.body.appendChild(a);
+    a.href = url;
+    a.download = `${fileName}.csv`;
     a.click();
-    document.body.removeChild(a);
   };
 
   const handleResetPassword = (userId: string) => {
-    if (confirm('Tem a certeza que deseja repor a password para "123"?')) {
+    if (confirm('Repor password para "123"?')) {
       const updated = users.map(u => u.id === userId ? { ...u, password: '123' } : u);
       onUpdateUsers(updated);
-      alert('Password resetada para 123');
     }
   };
 
@@ -160,56 +156,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setFormData({ ...user });
     } else {
       setEditingUser(null);
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        role: 'user',
-        password: '123'
-      });
+      setFormData({ firstName: '', lastName: '', email: '', phone: '', role: 'user', password: '123' });
     }
     setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingUser(null);
   };
 
   const handleSaveUser = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingUser) {
-      const updatedUsers = users.map(u => u.id === editingUser.id ? { ...u, ...formData } as User : u);
-      onUpdateUsers(updatedUsers);
+      onUpdateUsers(users.map(u => u.id === editingUser.id ? { ...u, ...formData } as User : u));
     } else {
-      const newUser: User = {
-        ...formData,
-        id: crypto.randomUUID(),
-        cars: []
-      } as User;
-      onUpdateUsers([...users, newUser]);
+      onUpdateUsers([...users, { ...formData, id: crypto.randomUUID(), cars: [] } as User]);
     }
-    closeModal();
-  };
-
-  const handleDeleteUser = (userId: string) => {
-    if (confirm('TEM A CERTEZA? Esta ação irá eliminar o utilizador e todos os seus dados permanentemente.')) {
-      onRemoveUser(userId);
-    }
-  };
-
-  const handleCancelRegistration = (regId: string) => {
-    if (confirm('Deseja cancelar esta inscrição de lavagem?')) {
-      onRemoveRegistration(regId);
-    }
+    setIsModalOpen(false);
   };
 
   const isOpen = areRegistrationsOpen(settings);
 
   return (
     <div className="space-y-8">
-      {/* Visual Header (Breadcrumb style) */}
       <div className="flex items-center gap-2 text-xs font-mono text-slate-500 uppercase tracking-widest mb-4">
         <ShieldCheck size={14} />
         <span>Administração</span>
@@ -223,40 +188,43 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {activeTab === 'weekly' && (
         <div className="space-y-6 animate-in fade-in slide-in-from-left-2">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <h3 className="text-xl font-bold flex items-center gap-2">
               <ClipboardList size={20} className="text-slate-500" />
-              Inscrições da Semana Corrente (W{currentWeek})
+              Inscrições Semanais (W{currentWeek})
             </h3>
             
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="bg-slate-900 border border-slate-800 p-1 rounded-2xl flex gap-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="bg-slate-900 border border-slate-800 p-1.5 rounded-2xl flex gap-1.5 shadow-inner">
                 <button
                   onClick={handleManualOpen}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all text-[10px] uppercase tracking-widest ${
+                  disabled={isProcessing}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all text-[10px] uppercase tracking-widest ${
                     isOpen 
-                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' 
-                    : 'text-slate-500 hover:text-slate-300'
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 ring-2 ring-emerald-500/20' 
+                    : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'
                   }`}
                 >
-                  <Play size={14} />
+                  {isProcessing && isOpen ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
                   Ativar
                 </button>
                 <button
                   onClick={handleManualClose}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all text-[10px] uppercase tracking-widest ${
+                  disabled={isProcessing}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all text-[10px] uppercase tracking-widest ${
                     !isOpen 
-                    ? 'bg-red-600 text-white shadow-lg shadow-red-500/20' 
-                    : 'text-slate-500 hover:text-slate-300'
+                    ? 'bg-red-600 text-white shadow-lg shadow-red-500/30 ring-2 ring-red-500/20' 
+                    : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'
                   }`}
                 >
-                  <PowerOff size={14} />
+                  {isProcessing && !isOpen ? <Loader2 size={14} className="animate-spin" /> : <PowerOff size={14} />}
                   Desativar
                 </button>
               </div>
 
-              <div className="text-[10px] font-mono text-cyan-500 bg-cyan-500/10 px-3 py-2 rounded-xl border border-cyan-500/20 h-[40px] flex items-center">
-                {weeklyRegistrations.length} / {settings.weeklyCapacity} OCUPADOS
+              <div className="text-[10px] font-mono text-cyan-500 bg-cyan-500/10 px-4 py-2.5 rounded-xl border border-cyan-500/20 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse"></span>
+                {weeklyRegistrations.length} / {settings.weeklyCapacity} LUGARES
               </div>
             </div>
           </div>
@@ -268,46 +236,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <tr className="bg-slate-800/50 text-slate-400 text-xs font-mono uppercase tracking-widest">
                     <th className="px-6 py-4">Utilizador</th>
                     <th className="px-6 py-4">Veículo</th>
-                    <th className="px-6 py-4">Lugar / Notas</th>
-                    <th className="px-6 py-4">Data Inscrição</th>
+                    <th className="px-6 py-4">Lugar</th>
+                    <th className="px-6 py-4">Data</th>
                     <th className="px-6 py-4 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
                   {weeklyRegistrations.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-slate-500 font-mono">
-                        Ainda não existem registos para esta semana operacional.
+                      <td colSpan={5} className="px-6 py-12 text-center text-slate-500 font-mono italic">
+                        Sem registos ativos para esta janela operacional.
                       </td>
                     </tr>
                   ) : (
                     weeklyRegistrations.map(reg => (
                       <tr key={reg.id} className="hover:bg-slate-800/20 transition-colors group">
-                        <td className="px-6 py-4">
-                          <div className="font-bold text-slate-200">{reg.userName}</div>
-                          <div className="text-[10px] text-slate-500 font-mono uppercase tracking-tighter">ID: {reg.userId.split('-')[0]}...</div>
+                        <td className="px-6 py-4 font-bold text-slate-200">{reg.userName}</td>
+                        <td className="px-6 py-4 text-sm text-slate-300 flex items-center gap-2">
+                          <CarIcon size={14} className="text-cyan-500" />
+                          {reg.carDetails}
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-2 text-sm">
-                            <CarIcon size={14} className="text-cyan-500" />
-                            <span className="text-slate-300">{reg.carDetails}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2 text-xs">
-                            <MapPin size={12} className="text-amber-500" />
-                            <span className="font-mono text-amber-500/80">{reg.parkingSpot || 'N/A'}</span>
-                          </div>
+                           <span className="text-xs font-mono text-amber-500">{reg.parkingSpot || '---'}</span>
                         </td>
                         <td className="px-6 py-4 font-mono text-xs text-slate-400">
-                          {new Date(reg.date).toLocaleDateString('pt-PT')} {new Date(reg.date).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(reg.date).toLocaleDateString('pt-PT')}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <button 
-                            onClick={() => handleCancelRegistration(reg.id)}
-                            className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                            title="Cancelar Inscrição"
-                          >
+                          <button onClick={() => onRemoveRegistration(reg.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg">
                             <Trash2 size={16} />
                           </button>
                         </td>
@@ -325,24 +281,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <FileSpreadsheet size={24} />
               </div>
               <div>
-                <h4 className="font-bold text-slate-200">Relatório Semanal</h4>
-                <p className="text-xs text-slate-500">Exportar registos da semana corrente para Excel ou CSV.</p>
+                <h4 className="font-bold text-slate-200">Exportar Registos</h4>
+                <p className="text-xs text-slate-500 font-mono uppercase tracking-tight">Current_Week_Report_W{currentWeek}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 w-full md:w-auto">
-              <button
-                onClick={() => exportToExcel(weeklyRegistrations, `lavagens-semana-${currentWeek}`)}
-                className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/20 font-bold py-2 px-4 rounded-xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
-              >
-                <FileSpreadsheet size={16} />
-                Excel
+              <button onClick={() => exportToExcel(weeklyRegistrations, `lavagens-w${currentWeek}`)} className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/20 font-bold py-2.5 px-5 rounded-xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
+                <FileSpreadsheet size={16} /> Excel
               </button>
-              <button
-                onClick={() => exportToCSV(weeklyRegistrations, `lavagens-semana-${currentWeek}`)}
-                className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 font-bold py-2 px-4 rounded-xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
-              >
-                <FileText size={16} />
-                CSV
+              <button onClick={() => exportToCSV(weeklyRegistrations, `lavagens-w${currentWeek}`)} className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 font-bold py-2.5 px-5 rounded-xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
+                <FileText size={16} /> CSV
               </button>
             </div>
           </div>
@@ -356,168 +304,61 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <Users size={20} className="text-slate-500" />
               Gestão de Utilizadores
             </h3>
-            <button
-              onClick={() => openModal()}
-              className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-cyan-500/20 transition-all"
-            >
-              <UserPlus size={16} />
-              Adicionar Utilizador
+            <button onClick={() => openModal()} className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-cyan-500/20">
+              <UserPlus size={16} /> Novo Utilizador
             </button>
           </div>
-
           <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-slate-800/50 text-slate-400 text-xs font-mono uppercase tracking-widest">
-                    <th className="px-6 py-4">Utilizador</th>
-                    <th className="px-6 py-4">ID de Acesso (Email)</th>
-                    <th className="px-6 py-4">Contacto</th>
-                    <th className="px-6 py-4">Nível</th>
-                    <th className="px-6 py-4 text-right">Ações de Segurança</th>
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-800/50 text-slate-400 text-xs font-mono uppercase tracking-widest">
+                  <th className="px-6 py-4">Utilizador</th>
+                  <th className="px-6 py-4">E-mail</th>
+                  <th className="px-6 py-4">Nível</th>
+                  <th className="px-6 py-4 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {users.map(u => (
+                  <tr key={u.id} className="hover:bg-slate-800/20">
+                    <td className="px-6 py-4 font-bold text-slate-200">{u.firstName} {u.lastName}</td>
+                    <td className="px-6 py-4 text-sm font-mono text-cyan-500/80">{u.email}</td>
+                    <td className="px-6 py-4">
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded font-mono ${u.role === 'admin' ? 'bg-red-500/10 text-red-400' : 'bg-slate-800 text-slate-400'}`}>
+                        {u.role.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right flex justify-end gap-1">
+                      <button onClick={() => handleResetPassword(u.id)} className="p-2 text-amber-500 hover:bg-amber-500/10 rounded-lg"><RefreshCcw size={16} /></button>
+                      <button onClick={() => openModal(u)} className="p-2 text-cyan-400 hover:bg-cyan-500/10 rounded-lg"><Edit3 size={16} /></button>
+                      {u.role !== 'admin' && <button onClick={() => onRemoveUser(u.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg"><Trash2 size={16} /></button>}
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800">
-                  {users.map(u => (
-                    <tr key={u.id} className="hover:bg-slate-800/20 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="font-bold text-slate-200">{u.firstName} {u.lastName}</div>
-                        <div className="text-[10px] text-slate-500 font-mono uppercase">{u.cars.length} Carros Registados</div>
-                      </td>
-                      <td className="px-6 py-4 text-sm font-mono text-cyan-500/80">{u.email}</td>
-                      <td className="px-6 py-4 text-sm text-slate-400 font-mono">{u.phone || '---'}</td>
-                      <td className="px-6 py-4">
-                        <span className={`text-[10px] font-bold px-2 py-1 rounded-md font-mono ${u.role === 'admin' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-slate-800 text-slate-400'}`}>
-                          {u.role.toUpperCase()}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right space-x-1">
-                        <button 
-                          onClick={() => handleResetPassword(u.id)}
-                          className="p-2 text-amber-500 hover:bg-amber-500/10 rounded-lg transition-colors"
-                          title="Reset Password (123)"
-                        >
-                          <RefreshCcw size={16} />
-                        </button>
-                        <button 
-                          onClick={() => openModal(u)}
-                          className="p-2 text-cyan-400 hover:bg-cyan-500/10 rounded-lg transition-colors"
-                          title="Editar Perfil"
-                        >
-                          <Edit3 size={16} />
-                        </button>
-                        {u.role !== 'admin' && (
-                          <button 
-                            onClick={() => handleDeleteUser(u.id)}
-                            className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                            title="Eliminar Utilizador"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-800/30">
-              <h4 className="text-xl font-bold flex items-center gap-2">
-                {editingUser ? <Edit3 className="text-cyan-400" /> : <UserPlus className="text-cyan-400" />}
-                {editingUser ? 'Editar Protocolo de Utilizador' : 'Novo Protocolo de Utilizador'}
-              </h4>
-              <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors">
-                <X size={24} />
-              </button>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-3xl shadow-2xl">
+            <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+              <h4 className="text-xl font-bold italic uppercase tracking-tight">Ficha de Utilizador</h4>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-500"><X size={24} /></button>
             </div>
-            
             <form onSubmit={handleSaveUser} className="p-8 space-y-6">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-mono text-slate-500 uppercase">Primeiro Nome</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2 px-4 focus:ring-2 focus:ring-cyan-500 outline-none text-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-mono text-slate-500 uppercase">Último Nome</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2 px-4 focus:ring-2 focus:ring-cyan-500 outline-none text-sm"
-                  />
-                </div>
+                <input type="text" required placeholder="Primeiro Nome" value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} className="bg-slate-800 border border-slate-700 rounded-xl py-2 px-4 text-sm outline-none" />
+                <input type="text" required placeholder="Último Nome" value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} className="bg-slate-800 border border-slate-700 rounded-xl py-2 px-4 text-sm outline-none" />
               </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-mono text-slate-500 uppercase">E-mail (Login ID)</label>
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2 px-4 focus:ring-2 focus:ring-cyan-500 outline-none text-sm font-mono"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-mono text-slate-500 uppercase">Telemóvel</label>
-                <input
-                  type="text"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2 px-4 focus:ring-2 focus:ring-cyan-500 outline-none text-sm"
-                  placeholder="9XXXXXXXX"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-mono text-slate-500 uppercase">Nível de Acesso</label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value as 'admin' | 'user' })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2 px-4 focus:ring-2 focus:ring-cyan-500 outline-none text-sm"
-                >
-                  <option value="user">Utilizador Comum</option>
-                  <option value="admin">Administrador de Sistema</option>
-                </select>
-              </div>
-
-              {!editingUser && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[10px] text-amber-500 font-mono">
-                  INFO: A password por defeito para novos utilizadores é "123".
-                </div>
-              )}
-
-              <div className="flex gap-4 pt-4">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="flex-1 px-6 py-3 border border-slate-700 text-slate-400 rounded-xl hover:bg-slate-800 font-bold transition-all"
-                >
-                  CANCELAR
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl font-bold shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2"
-                >
-                  <Save size={18} />
-                  GUARDAR DADOS
-                </button>
-              </div>
+              <input type="email" required placeholder="E-mail" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2 px-4 text-sm outline-none font-mono" />
+              <select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value as any })} className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2 px-4 text-sm outline-none">
+                <option value="user">Utilizador</option>
+                <option value="admin">Administrador</option>
+              </select>
+              <button type="submit" className="w-full bg-cyan-600 py-3 rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-cyan-500/20">Guardar Dados</button>
             </form>
           </div>
         </div>
@@ -526,91 +367,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {activeTab === 'settings' && (
         <div className="space-y-8 animate-in fade-in slide-in-from-left-2">
           <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl space-y-6 shadow-xl">
-              <h3 className="text-xl font-bold flex items-center gap-2">
-                <Settings size={20} className="text-slate-500" />
-                Parâmetros do Sistema
-              </h3>
-              
+            <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl space-y-6">
+              <h3 className="text-xl font-bold flex items-center gap-2"><Settings size={20} /> Parâmetros</h3>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm text-slate-400 font-mono">Capacidade Semanal (Vagas)</label>
-                  <input
-                    type="number"
-                    value={settings.weeklyCapacity}
-                    onChange={(e) => onUpdateSettings({ ...settings, weeklyCapacity: parseInt(e.target.value) || 0 })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 focus:ring-2 focus:ring-cyan-500 outline-none transition-all font-mono"
-                  />
-                </div>
-
-                <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
-                  <div className="flex items-center gap-2 text-amber-500 mb-2">
-                    <ShieldAlert size={16} />
-                    <span className="text-xs font-bold uppercase tracking-wider">Info de Operação</span>
-                  </div>
-                  <p className="text-[10px] text-slate-500 leading-relaxed">
-                    O controlo total das inscrições está agora centralizado no separador <b>'Registos da Semana'</b>. 
-                    Pode forçar a abertura ou o fecho da janela operacional independentemente do dia da semana.
-                  </p>
+                  <label className="text-xs text-slate-500 font-mono uppercase">Vagas Semanais</label>
+                  <input type="number" value={settings.weeklyCapacity} onChange={(e) => onUpdateSettings({ ...settings, weeklyCapacity: parseInt(e.target.value) || 0 })} className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 outline-none font-mono" />
                 </div>
               </div>
             </div>
-
-            <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl space-y-6 shadow-xl">
-              <h3 className="text-xl font-bold flex items-center gap-2">
-                <ImageIcon size={20} className="text-slate-500" />
-                Personalização de Interface
-              </h3>
-              
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm text-slate-400 font-mono">Asset de Autenticação (URL Imagem)</label>
-                  <input
-                    type="text"
-                    value={settings.loginImageUrl || ''}
-                    onChange={(e) => onUpdateSettings({ ...settings, loginImageUrl: e.target.value })}
-                    placeholder="https://images.unsplash.com/..."
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 focus:ring-2 focus:ring-cyan-500 outline-none text-xs font-mono"
-                  />
-                </div>
-                {settings.loginImageUrl && (
-                  <div className="rounded-xl overflow-hidden h-32 border border-slate-800 relative group">
-                    <div className="absolute inset-0 bg-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                      <span className="text-[10px] font-mono text-cyan-400 bg-slate-900/80 px-2 py-1 rounded">PREVIEW_MODE</span>
-                    </div>
-                    <img src={settings.loginImageUrl} alt="Preview" className="w-full h-full object-cover" />
-                  </div>
-                )}
+            <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl space-y-6">
+              <h3 className="text-xl font-bold flex items-center gap-2"><ImageIcon size={20} /> Aspeto</h3>
+              <div className="space-y-2">
+                <label className="text-xs text-slate-500 font-mono uppercase">URL Imagem Login</label>
+                <input type="text" value={settings.loginImageUrl || ''} onChange={(e) => onUpdateSettings({ ...settings, loginImageUrl: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 outline-none text-xs font-mono" />
               </div>
-            </div>
-          </div>
-
-          <div className="bg-slate-900 border border-emerald-500/20 p-8 rounded-3xl shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden group">
-            <div className="absolute inset-0 pointer-events-none opacity-[0.02] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_70%)] from-emerald-500"></div>
-            <div className="flex items-center gap-5 relative z-10">
-              <div className="w-14 h-14 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20 group-hover:scale-105 transition-transform">
-                <RefreshCcw size={28} />
-              </div>
-              <div>
-                <h4 className="text-lg font-bold text-slate-200 font-mono">Histórico Global</h4>
-                <p className="text-sm text-slate-400">Todos os registos desde o início. Ideal para auditoria.</p>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto relative z-10">
-              <button
-                onClick={() => exportToExcel(registrations, `historico-lavagens-completo`)}
-                className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 uppercase tracking-widest font-mono text-xs"
-              >
-                <FileSpreadsheet size={18} />
-                Excel (.XLSX)
-              </button>
-              <button
-                onClick={() => exportToCSV(registrations, `historico-lavagens-completo`)}
-                className="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 px-6 rounded-xl border border-slate-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest font-mono text-xs"
-              >
-                <FileText size={18} />
-                CSV
-              </button>
             </div>
           </div>
         </div>
