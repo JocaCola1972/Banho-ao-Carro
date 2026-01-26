@@ -58,9 +58,21 @@ const App: React.FC = () => {
     fetchData();
   }, []);
 
-  const handleLogin = (user: User) => {
-    setAuth({ user, isAuthenticated: true });
-    setCurrentPage('dashboard');
+  const handleLogin = async (user: User) => {
+    // Ativar estado de carregamento para sincronização pós-login
+    setLoading(true);
+    
+    // Forçar uma sincronização completa dos dados da Cloud antes de entrar
+    const syncResult = await fetchData(true);
+    
+    if (syncResult) {
+      setAuth({ user, isAuthenticated: true });
+      setCurrentPage('dashboard');
+    } else {
+      console.error("Erro crítico na sincronização inicial pós-login.");
+    }
+    
+    setLoading(false);
   };
 
   const handleLogout = () => {
@@ -138,7 +150,6 @@ const App: React.FC = () => {
   const updateSettings = async (newSettings: AppSettings) => {
     try {
       await saveSettings(newSettings);
-      // Garantir que o estado local é atualizado imediatamente para refletir na UI
       setAppSettings({ ...newSettings });
     } catch (err) {
       console.error("Update settings failed:", err);
@@ -149,8 +160,6 @@ const App: React.FC = () => {
   const handlePageChange = (page: string) => {
     setCurrentPage(page);
     setIsMobileMenuOpen(false);
-    
-    // Sincronização automática em todas as trocas de página
     fetchData(true);
   };
 
@@ -158,7 +167,9 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-cyan-400 font-mono p-4">
         <Loader2 className="animate-spin mb-4" size={48} />
-        <p className="animate-pulse text-center uppercase tracking-widest text-xs">A ligar aos servidores Cloud...</p>
+        <p className="animate-pulse text-center uppercase tracking-widest text-[10px] md:text-xs">
+          A sincronizar infraestrutura Cloud...
+        </p>
       </div>
     );
   }
@@ -171,7 +182,7 @@ const App: React.FC = () => {
     const isAdminPage = currentPage.startsWith('admin');
     
     if (isAdminPage) {
-      if (auth.user?.role !== 'admin') return <div className="p-8 text-center text-red-500 font-bold">ACESSO NEGADO: PROTOCOLO DE SEGURANÇA ATIVADO</div>;
+      if (auth.user?.role !== 'admin') return <div className="p-8 text-center text-red-500 font-bold font-mono">ACESSO NEGADO: PROTOCOLO DE SEGURANÇA ATIVADO</div>;
       
       let initialTab: 'general' | 'weekly' | 'users' | 'settings' = 'general';
       if (currentPage === 'admin-weekly') initialTab = 'weekly';
