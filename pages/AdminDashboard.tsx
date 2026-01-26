@@ -89,6 +89,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleManualOpen = async () => {
     if (isProcessing) return;
     setIsProcessing(true);
+    console.debug(`[Admin] A tentar abrir inscrições para W${currentWeek} Y${currentYear}`);
+    
     try {
       await onUpdateSettings({
         ...settings,
@@ -97,8 +99,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         manualCloseWeek: null,
         manualCloseYear: null
       });
-    } catch (err) {
-      alert('Erro ao ativar inscrições.');
+      console.debug(`[Admin] Sucesso ao abrir inscrições.`);
+    } catch (err: any) {
+      console.error(`[Admin] Erro ao abrir inscrições:`, err);
+      alert(`Erro ao ativar inscrições: ${err.message || 'Verifique a consola.'}`);
     } finally {
       setIsProcessing(false);
     }
@@ -107,6 +111,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleManualClose = async () => {
     if (isProcessing) return;
     setIsProcessing(true);
+    console.debug(`[Admin] A tentar fechar inscrições para W${currentWeek} Y${currentYear}`);
+
     try {
       await onUpdateSettings({
         ...settings,
@@ -115,8 +121,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         manualCloseWeek: currentWeek,
         manualCloseYear: currentYear
       });
-    } catch (err) {
-      alert('Erro ao encerrar inscrições.');
+      console.debug(`[Admin] Sucesso ao fechar inscrições.`);
+    } catch (err: any) {
+      console.error(`[Admin] Erro ao fechar inscrições:`, err);
+      alert(`Erro ao encerrar inscrições: ${err.message || 'Verifique a consola.'}`);
     } finally {
       setIsProcessing(false);
     }
@@ -227,8 +235,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
 
+          <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl flex items-center justify-center min-h-[200px] group">
+             <div className="text-center space-y-4">
+                <BarChart3 size={48} className="mx-auto text-slate-700 group-hover:text-cyan-500 transition-colors" />
+                <p className="text-slate-500 font-mono text-sm">Dashboard de Analytics em tempo real ativo.</p>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'weekly' && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-left-2">
+          {/* Cartão de Início de Ciclo Principal */}
           {!isOpen && (
-            <div className="bg-emerald-600/10 border border-emerald-500/20 p-8 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl animate-in zoom-in-95">
+            <div className="bg-emerald-600/10 border border-emerald-500/20 p-8 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl animate-in zoom-in-95 mb-4">
               <div className="flex items-center gap-6">
                 <div className="p-4 bg-emerald-500/20 rounded-2xl text-emerald-400 shadow-lg shadow-emerald-500/20">
                   <Zap size={32} />
@@ -249,17 +269,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           )}
 
-          <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl flex items-center justify-center min-h-[200px] group">
-             <div className="text-center space-y-4">
-                <BarChart3 size={48} className="mx-auto text-slate-700 group-hover:text-cyan-500 transition-colors" />
-                <p className="text-slate-500 font-mono text-sm">Dashboard de Analytics em tempo real ativo.</p>
-             </div>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'weekly' && (
-        <div className="space-y-6 animate-in fade-in slide-in-from-left-2">
           {/* Status Bar */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -287,16 +296,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </h3>
             
             <div className="flex gap-2">
-              {!isOpen ? (
-                <button 
-                  onClick={handleManualOpen}
-                  disabled={isProcessing}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"
-                >
-                  {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
-                  Iniciar Inscrições
-                </button>
-              ) : (
+              {isOpen && (
                 <button 
                   onClick={handleManualClose}
                   disabled={isProcessing}

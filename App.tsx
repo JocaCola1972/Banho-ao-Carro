@@ -75,6 +75,7 @@ const App: React.FC = () => {
       setUsers(newUsers);
     } catch (err) {
       console.error("Update users failed:", err);
+      throw err;
     }
   };
 
@@ -84,6 +85,7 @@ const App: React.FC = () => {
       setUsers(prev => prev.filter(u => u.id !== userId));
     } catch (err) {
       console.error("Delete user failed:", err);
+      throw err;
     }
   };
 
@@ -93,6 +95,7 @@ const App: React.FC = () => {
       setRegistrations(newRegs);
     } catch (err) {
       console.error("Update registrations failed:", err);
+      throw err;
     }
   };
 
@@ -128,15 +131,18 @@ const App: React.FC = () => {
       setRegistrations(prev => prev.filter(r => r.id !== regId));
     } catch (err) {
       console.error("Remove registration failed:", err);
+      throw err;
     }
   };
 
   const updateSettings = async (newSettings: AppSettings) => {
     try {
       await saveSettings(newSettings);
-      setAppSettings(newSettings);
+      // Garantir que o estado local é atualizado imediatamente para refletir na UI
+      setAppSettings({ ...newSettings });
     } catch (err) {
       console.error("Update settings failed:", err);
+      throw err;
     }
   };
 
