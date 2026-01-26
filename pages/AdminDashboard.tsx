@@ -89,20 +89,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleManualOpen = async () => {
     if (isProcessing) return;
     setIsProcessing(true);
-    console.debug(`[Admin] A tentar abrir inscrições para W${currentWeek} Y${currentYear}`);
     
     try {
       await onUpdateSettings({
         ...settings,
         manualOpenWeek: currentWeek,
-        manualOpenYear: currentYear,
-        manualCloseWeek: null,
-        manualCloseYear: null
+        manualOpenYear: currentYear
       });
-      console.debug(`[Admin] Sucesso ao abrir inscrições.`);
     } catch (err: any) {
-      console.error(`[Admin] Erro ao abrir inscrições:`, err);
-      alert(`Erro ao ativar inscrições: ${err.message || 'Verifique a consola.'}`);
+      alert(`Erro ao ativar inscrições: ${err.message}`);
     } finally {
       setIsProcessing(false);
     }
@@ -111,20 +106,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleManualClose = async () => {
     if (isProcessing) return;
     setIsProcessing(true);
-    console.debug(`[Admin] A tentar fechar inscrições para W${currentWeek} Y${currentYear}`);
 
     try {
+      // Fechar as inscrições significa colocar a semana de abertura a null
       await onUpdateSettings({
         ...settings,
         manualOpenWeek: null,
-        manualOpenYear: null,
-        manualCloseWeek: currentWeek,
-        manualCloseYear: currentYear
+        manualOpenYear: null
       });
-      console.debug(`[Admin] Sucesso ao fechar inscrições.`);
     } catch (err: any) {
-      console.error(`[Admin] Erro ao fechar inscrições:`, err);
-      alert(`Erro ao encerrar inscrições: ${err.message || 'Verifique a consola.'}`);
+      alert(`Erro ao encerrar inscrições: ${err.message}`);
     } finally {
       setIsProcessing(false);
     }
@@ -246,7 +237,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {activeTab === 'weekly' && (
         <div className="space-y-6 animate-in fade-in slide-in-from-left-2">
-          {/* Cartão de Início de Ciclo Principal */}
           {!isOpen && (
             <div className="bg-emerald-600/10 border border-emerald-500/20 p-8 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl animate-in zoom-in-95 mb-4">
               <div className="flex items-center gap-6">
@@ -269,7 +259,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           )}
 
-          {/* Status Bar */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold font-mono uppercase tracking-wider ${isOpen ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
@@ -370,7 +359,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {/* VIEW: GESTÃO DE UTILIZADORES */}
       {activeTab === 'users' && (
         <div className="space-y-4 animate-in fade-in slide-in-from-left-2">
           <div className="flex justify-between items-center">
@@ -415,7 +403,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {/* VIEW: DEFINIÇÕES DO SISTEMA */}
       {activeTab === 'settings' && (
         <div className="space-y-8 animate-in fade-in slide-in-from-left-2">
           <div className="grid md:grid-cols-2 gap-8">
@@ -441,7 +428,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {/* MODAL DE UTILIZADOR */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
           <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">

@@ -13,13 +13,10 @@ const DEFAULT_ADMIN: User = {
   cars: []
 };
 
-// Fix: Add missing properties manualCloseWeek and manualCloseYear to match AppSettings type
 const DEFAULT_SETTINGS: AppSettings = {
   weeklyCapacity: 10,
   manualOpenWeek: null,
   manualOpenYear: null,
-  manualCloseWeek: null,
-  manualCloseYear: null,
   loginImageUrl: 'https://images.unsplash.com/photo-1520333789090-1afc82db536a?auto=format&fit=crop&q=80&w=1200'
 };
 
@@ -92,15 +89,30 @@ export const getStoredSettings = async (): Promise<AppSettings> => {
     if (error || !data) {
       return DEFAULT_SETTINGS;
     }
-    return data;
+    // Higienização para garantir que não enviamos lixo para o estado
+    return {
+      weeklyCapacity: data.weeklyCapacity,
+      manualOpenWeek: data.manualOpenWeek,
+      manualOpenYear: data.manualOpenYear,
+      loginImageUrl: data.loginImageUrl
+    };
   } catch (e) {
     return DEFAULT_SETTINGS;
   }
 };
 
 export const saveSettings = async (settings: AppSettings) => {
+  // Criamos um objeto limpo apenas com as colunas que existem na base de dados
+  const payload = {
+    id: 1,
+    weeklyCapacity: settings.weeklyCapacity,
+    manualOpenWeek: settings.manualOpenWeek,
+    manualOpenYear: settings.manualOpenYear,
+    loginImageUrl: settings.loginImageUrl
+  };
+
   const { error } = await supabase
     .from('settings')
-    .upsert({ id: 1, ...settings });
+    .upsert(payload);
   if (error) throw error;
 };

@@ -34,8 +34,6 @@ export interface AppSettings {
   weeklyCapacity: number;
   manualOpenWeek: number | null;
   manualOpenYear: number | null;
-  manualCloseWeek: number | null;
-  manualCloseYear: number | null;
   loginImageUrl: string | null;
 }
 
