@@ -29,7 +29,8 @@ import {
   ShieldAlert,
   Activity,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Zap
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -60,6 +61,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'general' | 'weekly' | 'users' | 'settings'>(forcedTab || 'general');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   useEffect(() => {
     if (forcedTab) {
@@ -83,6 +85,42 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     role: 'user',
     password: '123'
   });
+
+  const handleManualOpen = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+    try {
+      await onUpdateSettings({
+        ...settings,
+        manualOpenWeek: currentWeek,
+        manualOpenYear: currentYear,
+        manualCloseWeek: null,
+        manualCloseYear: null
+      });
+    } catch (err) {
+      alert('Erro ao ativar inscrições.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleManualClose = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+    try {
+      await onUpdateSettings({
+        ...settings,
+        manualOpenWeek: null,
+        manualOpenYear: null,
+        manualCloseWeek: currentWeek,
+        manualCloseYear: currentYear
+      });
+    } catch (err) {
+      alert('Erro ao encerrar inscrições.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const exportToExcel = (data: Registration[], fileName: string) => {
     const preparedData = data.map(r => ({
@@ -183,9 +221,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className={`text-xl font-bold uppercase tracking-tighter ${isOpen ? 'text-emerald-400' : 'text-red-400'}`}>
                 {isOpen ? 'Inscrições Abertas' : 'Sistema Trancado'}
               </div>
-              <div className="text-[10px] text-slate-600 font-mono mt-1">PROTOCOLO_AUTOMÁTICO</div>
+              <div className="text-[10px] text-slate-600 font-mono mt-1">
+                {isOpen ? 'AGUARDANDO_SUBMISSÕES' : 'AGUARDANDO_ADMIN_START'}
+              </div>
             </div>
           </div>
+
+          {!isOpen && (
+            <div className="bg-emerald-600/10 border border-emerald-500/20 p-8 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl animate-in zoom-in-95">
+              <div className="flex items-center gap-6">
+                <div className="p-4 bg-emerald-500/20 rounded-2xl text-emerald-400 shadow-lg shadow-emerald-500/20">
+                  <Zap size={32} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white uppercase italic tracking-tight">Iniciar Ciclo Semanal</h3>
+                  <p className="text-emerald-100/60 text-sm font-mono uppercase tracking-widest mt-1">Pronto para abrir as inscrições para a semana {currentWeek}?</p>
+                </div>
+              </div>
+              <button 
+                onClick={handleManualOpen}
+                disabled={isProcessing}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-8 py-4 rounded-2xl shadow-xl shadow-emerald-500/30 transition-all flex items-center gap-3 uppercase tracking-widest text-sm hover:scale-105 active:scale-95 disabled:opacity-50"
+              >
+                {isProcessing ? <Loader2 size={20} className="animate-spin" /> : <Play size={20} />}
+                Iniciar Inscrições
+              </button>
+            </div>
+          )}
 
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl flex items-center justify-center min-h-[200px] group">
              <div className="text-center space-y-4">
@@ -223,6 +285,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <ClipboardList size={20} className="text-slate-500" />
               Janela Operacional W{currentWeek}
             </h3>
+            
+            <div className="flex gap-2">
+              {!isOpen ? (
+                <button 
+                  onClick={handleManualOpen}
+                  disabled={isProcessing}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"
+                >
+                  {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+                  Iniciar Inscrições
+                </button>
+              ) : (
+                <button 
+                  onClick={handleManualClose}
+                  disabled={isProcessing}
+                  className="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-red-500/20 transition-all"
+                >
+                  {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <PowerOff size={14} />}
+                  Fechar Janela
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
